@@ -1,0 +1,110 @@
+import { randomBytes } from 'crypto'
+import { kvGet, kvSet, kvScanKeys } from './kv'
+import { maskContacts } from './mask'
+
+export interface Partner {
+  id: string
+  slug: string
+  token: string // секрет кабинета и привязки Telegram
+  name: string
+  phone: string // 7XXXXXXXXXX
+  cats: string[]
+  city: string
+  tgChatId?: string
+  leads: number // принятые заявки
+  createdAt: number
+}
+
+export interface Msg { from: 'client' | 'partner'; text: string; at: number }
+
+export interface Conv {
+  id: string
+  partnerId: string
+  clientName: string
+  clientPhone: string
+  accepted: boolean // партнёр ответил: заявка засчитана как лид
+  createdAt: number
+  msgs: Msg[]
+}
+
+const rid = (n = 8) => randomBytes(n).toString('hex')
+
+const TR: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm',
+  н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch',
+  ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+}
+export function slugify(s: string): string {
+  return s.toLowerCase().split('').map(ch => TR[ch] ?? ch).join('')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+}
+
+export async function createPartner(input: { name: string; phone: string; cats: string[]; city: string }): Promise<Partner | 'exists'> {
+  if (await kvGet<string>(`pphone:${input.phone}`)) return 'exists'
+  const id = rid(6)
+  const base = slugify(input.name) || input.cats[0] || 'partner'
+  const slug = `${base}-${rid(2)}`
+  const p: Partner = { id, slug, token: rid(16), name: input.name, phone: input.phone, cats: input.cats, city: input.city, leads: 0, createdAt: Date.now() }
+  await savePartner(p)
+  await kvSet(`pphone:${p.phone}`, p.id)
+  await kvSet(`pslug:${p.slug}`, p.id)
+  await kvSet(`ptok:${p.token}`, p.id)
+  return p
+}
+
+export const savePartner = (p: Partner) => kvSet(`partner:${p.id}`, p)
+export const getPartner = (id: string) => kvGet<Partner>(`partner:${id}`)
+
+export async function getPartnerBySlug(slug: string) {
+  const id = await kvGet<string>(`pslug:${slug}`)
+  return id ? getPartner(id) : null
+}
+export async function getPartnerByToken(token: string) {
+  const id = await kvGet<string>(`ptok:${token}`)
+  return id ? getPartner(id) : null
+}
+
+export async function listPartners(): Promise<Partner[]> {
+  const keys = await kvScanKeys('partner:*')
+  const all = await Promise.all(keys.map(k => kvGet<Partner>(k)))
+  return all.filter((p): p is Partner => !!p).sort((a, b) => b.createdAt - a.createdAt)
+}
+
+export const getConv = (id: string) => kvGet<Conv>(`conv:${id}`)
+export const saveConv = (c: Conv) => kvSet(`conv:${c.id}`, c)
+
+export async function createConv(partnerId: string, clientName: string, clientPhone: string, text: string): Promise<Conv> {
+  const c: Conv = { id: rid(8), partnerId, clientName, clientPhone, accepted: false, createdAt: Date.now(), msgs: [{ from: 'client', text, at: Date.now() }] }
+  await saveConv(c)
+  const ids = (await kvGet<string[]>(`pconv:${partnerId}`)) ?? []
+  await kvSet(`pconv:${partnerId}`, [c.id, ...ids].slice(0, 300))
+  return c
+}
+
+export async function listConvs(partnerId: string): Promise<Conv[]> {
+  const ids = (await kvGet<string[]>(`pconv:${partnerId}`)) ?? []
+  const all = await Promise.all(ids.map(getConv))
+  return all.filter((c): c is Conv => !!c)
+}
+
+export async function listAllConvs(): Promise<Conv[]> {
+  const keys = await kvScanKeys('conv:*')
+  const all = await Promise.all(keys.map(k => kvGet<Conv>(k)))
+  return all.filter((c): c is Conv => !!c).sort((a, b) => b.createdAt - a.createdAt)
+}
+
+// Что видит партнёр: до принятия заявки контакты клиента скрыты
+export function partnerView(c: Conv) {
+  return {
+    id: c.id,
+    clientName: c.clientName,
+    clientPhone: c.accepted ? c.clientPhone : null,
+    accepted: c.accepted,
+    createdAt: c.createdAt,
+    msgs: c.msgs.map(m => (m.from === 'client' && !c.accepted ? { ...m, text: maskContacts(m.text) } : m)),
+  }
+}
+
+// Привязка сообщения в Telegram → диалог (для ответа через «Ответить»)
+export const rememberTgMsg = (chatId: string, msgId: number, convId: string) => kvSet(`tgmsg:${chatId}:${msgId}`, convId)
+export const lookupTgMsg = (chatId: string, msgId: number) => kvGet<string>(`tgmsg:${chatId}:${msgId}`)
