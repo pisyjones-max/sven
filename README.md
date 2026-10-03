@@ -24,6 +24,12 @@ npm run dev
 3. Переменные: см. `.env.example` (TG_TOKEN, TG_ADMIN_CHAT_ID, NEXT_PUBLIC_TG_BOT, ADMIN_KEY, NEXT_PUBLIC_SITE_URL).
 4. После деплоя один раз открыть `/api/admin/setup?key=ADMIN_KEY`: подключится Telegram webhook.
 
+## Деплой на свой сервер (VDS, как PLATFORMA)
+```
+sudo bash deploy/setup.sh [домен]
+```
+Ставит приложение в `/var/www/sven` (pm2, порт 3100, nginx; без домена доступно на порту 8080), хранит данные в `/var/www/sven-data/kv.json`. Обновление: `bash /var/www/sven/deploy/update.sh`. Ключи Telegram в `/var/www/sven/.env.production`.
+
 ## Не сделано (следующие шаги)
 - Проверка телефона партнёра по SMS/звонку (сейчас по номеру любой может создать страницу)
 - Уведомления в MAX и на email (сейчас Telegram и кабинет)
