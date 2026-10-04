@@ -1,16 +1,16 @@
 import Link from 'next/link'
 import { SITE_NAME } from '@/lib/site'
-import { KIND_LABEL } from '@/lib/catalog'
+import { KIND_LABEL, CATEGORIES, catHref } from '@/lib/catalog'
 
 export function Header() {
   return (
     <header className="hdr">
       <div className="wrap hdr-in">
-        <Link href="/" className="logo">{SITE_NAME}</Link>
+        <Link href="/" className="logo"><span className="logo-mark">⌂</span>{SITE_NAME}</Link>
         <nav>
           <Link href={`/${KIND_LABEL.zastroyshchiki.path}`}>Застройщики</Link>
           <Link href={`/${KIND_LABEL.uslugi.path}`}>Услуги</Link>
-          <Link href="/partner/register" className="btn sm">Стать партнёром</Link>
+          <Link href="/partner/register" className="btn sm">Для компаний</Link>
         </nav>
       </div>
     </header>
@@ -21,8 +21,25 @@ export function Footer() {
   return (
     <footer className="ftr">
       <div className="wrap">
-        <p>{SITE_NAME}: информационный сервис. Мы показываем компании и передаём заявки, договор заключается напрямую с исполнителем.</p>
-        <p><Link href="/privacy">Политика обработки данных</Link> · <Link href="/partner/register">Разместить компанию</Link></p>
+        <div className="ftr-grid">
+          <div>
+            <b>{SITE_NAME}</b>
+            <p>Информационный сервис. Мы показываем компании и передаём заявки, договор заключается напрямую с исполнителем.</p>
+          </div>
+          <div>
+            <b>Застройщики</b>
+            {CATEGORIES.filter(c => c.kind === 'zastroyshchiki').map(c => <Link key={c.slug} href={catHref(c)}>{c.title}</Link>)}
+          </div>
+          <div>
+            <b>Услуги</b>
+            {CATEGORIES.filter(c => c.kind === 'uslugi').slice(0, 6).map(c => <Link key={c.slug} href={catHref(c)}>{c.title}</Link>)}
+          </div>
+          <div>
+            <b>Компаниям</b>
+            <Link href="/partner/register">Разместить компанию</Link>
+            <Link href="/privacy">Политика данных</Link>
+          </div>
+        </div>
       </div>
     </footer>
   )

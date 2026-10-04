@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { Category, City, CITIES, KIND_LABEL, catHref } from '@/lib/catalog'
 import { Partner } from '@/lib/store'
 import { PartnerCard } from './PartnerCard'
+import { AdBanner } from './AdBanner'
+import { LeadForm } from './LeadForm'
 import { jsonLd, faqSchema, breadcrumbs } from '@/lib/schema'
 
 export function CatalogView({ cat, city, partners }: { cat: Category; city?: City; partners: Partner[] }) {
@@ -24,16 +26,36 @@ export function CatalogView({ cat, city, partners }: { cat: Category; city?: Cit
       <p className="crumbs"><Link href="/">Главная</Link> / <Link href={`/${KIND_LABEL[cat.kind].path}`}>{KIND_LABEL[cat.kind].title}</Link></p>
       <h1>{cat.h1}{where}</h1>
       <p className="lead">{cat.blurb}</p>
-      {partners.length ? (
-        <div className="grid">{partners.map(p => <PartnerCard key={p.id} p={p} />)}</div>
-      ) : (
-        <div className="card">
-          <p>Компаний в этом разделе пока нет. Вы {cat.kind === 'uslugi' ? 'исполнитель' : 'застройщик'}? Станьте первым: регистрация занимает минуту.</p>
-          <Link className="btn" href="/partner/register">Стать партнёром</Link>
+      <div className="cat-grid">
+        <div>
+          {partners.length ? (
+            <div className="plist">
+              {partners.map((p, i) => (
+                <div key={p.id} className="plist-i">
+                  <PartnerCard p={p} />
+                  {i === 1 && <AdBanner slot="wide" seed={`${path}-inline`} />}
+                </div>
+              ))}
+              {partners.length < 2 && <AdBanner slot="wide" seed={`${path}-inline`} />}
+            </div>
+          ) : (
+            <>
+              <div className="card empty">
+                <h3>Компаний в этом разделе пока нет</h3>
+                <p>Вы {cat.kind === 'uslugi' ? 'исполнитель' : 'застройщик'}? Станьте первым: регистрация занимает минуту.</p>
+                <Link className="btn" href="/partner/register">Стать партнёром</Link>
+              </div>
+              <AdBanner slot="wide" seed={`${path}-inline`} />
+            </>
+          )}
         </div>
-      )}
+        <aside className="cat-aside">
+          <LeadForm cat={cat.slug} city={city?.slug} title="Получить предложения" sub="Одна заявка, ответы от нескольких компаний в чате." />
+          <AdBanner slot="side" seed={`${path}-side`} />
+        </aside>
+      </div>
       <h2>Другие районы</h2>
-      <p className="links">{CITIES.filter(c => c.slug !== city?.slug).map(c => <Link key={c.slug} href={catHref(cat, c.slug)}>{c.name}</Link>)}</p>
+      <p className="links">{CITIES.filter(c => c.slug !== city?.slug).map(c => <Link key={c.slug} href={catHref(cat, c.slug)} className="pill">{c.name}</Link>)}</p>
       <h2>Частые вопросы</h2>
       {faq.map(f => <details key={f.q} className="faq"><summary>{f.q}</summary><p>{f.a}</p></details>)}
     </>

@@ -1,13 +1,21 @@
 import Link from 'next/link'
 import { Partner } from '@/lib/store'
-import { getCategory, getCity } from '@/lib/catalog'
+import { getCategory, getCity, ICON } from '@/lib/catalog'
+import { Ph } from './Ph'
 
 export function PartnerCard({ p }: { p: Partner }) {
+  const main = getCategory(p.cats[0])
   return (
-    <Link href={`/p/${p.slug}`} className="card pc">
-      <b>{p.name}</b>
-      <span className="muted small">{getCity(p.city)?.name}</span>
-      <span className="tags">{p.cats.slice(0, 4).map(s => <i key={s}>{getCategory(s)?.title}</i>)}</span>
+    <Link href={`/p/${p.slug}`} className="pcard">
+      <Ph seed={p.slug} icon={(main && ICON[main.slug]) || '🏠'} className="pcard-ph" />
+      <div className="pcard-body">
+        <b className="pcard-name">{p.name}{p.demo && <em className="badge">тест</em>}</b>
+        <span className="muted small">{getCity(p.city)?.name}{p.since ? ` · с ${p.since} года` : ''}</span>
+        {p.price && <span className="price">{p.price}</span>}
+        {p.desc && <span className="pcard-desc">{p.desc.slice(0, 120)}{p.desc.length > 120 ? '…' : ''}</span>}
+        <span className="tags">{p.cats.slice(0, 3).map(s => <i key={s}>{getCategory(s)?.title}</i>)}</span>
+      </div>
+      <span className="pcard-cta">Написать →</span>
     </Link>
   )
 }

@@ -5,6 +5,7 @@ import { getPartnerBySlug } from '@/lib/store'
 import { getCategory, getCity, catHref, ICON } from '@/lib/catalog'
 import { ChatWidget } from '@/components/ChatWidget'
 import { Ph } from '@/components/Ph'
+import { AdBanner } from '@/components/AdBanner'
 import { SITE_URL } from '@/lib/site'
 import { jsonLd } from '@/lib/schema'
 
@@ -75,6 +76,7 @@ export default async function PartnerPage({ params }: P) {
         </div>
         <aside>
           <ChatWidget slug={p.slug} partnerName={p.name} />
+          <AdBanner slot="side" seed={p.slug} />
         </aside>
       </div>
     </>
