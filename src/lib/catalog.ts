@@ -57,3 +57,8 @@ export const getCity = (slug: string) => CITIES.find(c => c.slug === slug)
 export const catsOfKind = (kind: Kind) => CATEGORIES.filter(c => c.kind === kind)
 export const catHref = (c: Category, citySlug?: string) =>
   `/${KIND_LABEL[c.kind].path}/${c.slug}${citySlug ? `/${citySlug}` : ''}`
+
+export const ICON: Record<string, string> = {
+  'stroyat-i-prodayut': '🏘️', 'pod-zakaz': '🏗️', 'gotovye-doma': '🏡', zabor: '🧱', krovlya: '🏠', garazh: '🚗',
+  'parkovka-plitka': '🅿️', 'pokos-travy': '🌿', 'vyvoz-musora': '🚛', 'otkachka-septika': '🚰', 'uborka-snega': '❄️',
+}

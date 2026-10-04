@@ -16,7 +16,7 @@ async function resolve(p: P['params']) {
 export async function generateMetadata({ params }: P): Promise<Metadata> {
   const c = await resolve(params)
   if (!c) return {}
-  return { title: `${c.h1} в Подмосковье`, description: c.blurb, alternates: { canonical: catHref(c) } }
+  return { title: `${c.h1} в Подмосковье`, description: c.blurb, alternates: { canonical: catHref(c) }, robots: process.env.SEED_DEMO === '1' ? { index: false, follow: false } : undefined }
 }
 
 export default async function CatPage({ params }: P) {

@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto'
 import { kvGet, kvSet, kvScanKeys } from './kv'
 import { maskContacts } from './mask'
+import { DEMO_PARTNERS } from './demo'
 
 export interface Partner {
   id: string
@@ -13,6 +14,13 @@ export interface Partner {
   tgChatId?: string
   leads: number // принятые заявки
   createdAt: number
+  // Необязательный профиль: заполняется позже, в кабинете
+  desc?: string
+  since?: number
+  price?: string
+  features?: string[]
+  items?: { title: string; meta: string; price: string }[]
+  demo?: boolean // тестовая компания: не индексируется, в sitemap не попадает
 }
 
 export interface Msg { from: 'client' | 'partner'; text: string; at: number }
@@ -53,18 +61,40 @@ export async function createPartner(input: { name: string; phone: string; cats: 
 }
 
 export const savePartner = (p: Partner) => kvSet(`partner:${p.id}`, p)
-export const getPartner = (id: string) => kvGet<Partner>(`partner:${id}`)
+
+// Тестовые компании: только при SEED_DEMO=1. Обновляются при каждом старте, счётчик лидов сохраняется.
+type DemoGlobal = typeof globalThis & { __demoSeed?: Promise<void> }
+function ensureDemo(): Promise<void> {
+  if (process.env.SEED_DEMO !== '1') return Promise.resolve()
+  const g = globalThis as DemoGlobal
+  return (g.__demoSeed ??= (async () => {
+    for (const d of DEMO_PARTNERS) {
+      const old = await kvGet<Partner>(`partner:${d.id}`)
+      await kvSet(`partner:${d.id}`, { ...d, leads: old?.leads ?? 0, tgChatId: old?.tgChatId })
+      await kvSet(`pslug:${d.slug}`, d.id)
+      await kvSet(`ptok:${d.token}`, d.id)
+    }
+  })())
+}
+
+export async function getPartner(id: string) {
+  await ensureDemo()
+  return kvGet<Partner>(`partner:${id}`)
+}
 
 export async function getPartnerBySlug(slug: string) {
+  await ensureDemo()
   const id = await kvGet<string>(`pslug:${slug}`)
   return id ? getPartner(id) : null
 }
 export async function getPartnerByToken(token: string) {
+  await ensureDemo()
   const id = await kvGet<string>(`ptok:${token}`)
   return id ? getPartner(id) : null
 }
 
 export async function listPartners(): Promise<Partner[]> {
+  await ensureDemo()
   const keys = await kvScanKeys('partner:*')
   const all = await Promise.all(keys.map(k => kvGet<Partner>(k)))
   return all.filter((p): p is Partner => !!p).sort((a, b) => b.createdAt - a.createdAt)

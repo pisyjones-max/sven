@@ -30,6 +30,8 @@ if [ ! -f "$APP_DIR/.env.production" ]; then
 cat > "$APP_DIR/.env.production" <<ENV
 NEXT_PUBLIC_SITE_URL=$SITE
 NEXT_PUBLIC_SITE_NAME=Платформа домов
+# Тестовые компании для проверки вида. Перед боевым запуском удалить эту строку.
+SEED_DEMO=1
 DATA_DIR=$DATA_DIR
 ADMIN_KEY=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)
 TG_WEBHOOK_SECRET=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)

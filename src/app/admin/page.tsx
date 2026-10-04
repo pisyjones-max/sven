@@ -15,7 +15,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <h1>Админка</h1>
       <p>Партнёров: {partners.length} · Диалогов: {convs.length} · Принято лидов: {partners.reduce((s, p) => s + p.leads, 0)}</p>
       <h2>Партнёры</h2>
-      {partners.map(p => <div key={p.id} className="card"><b>{p.name}</b> +{p.phone} · {p.cats.join(', ')} · {p.city} · лидов: {p.leads} · TG: {p.tgChatId ? 'да' : 'нет'}</div>)}
+      {partners.map(p => <div key={p.id} className="card"><b>{p.name}</b> +{p.phone} · {p.cats.join(', ')} · {p.city} · лидов: {p.leads} · TG: {p.tgChatId ? 'да' : 'нет'} · <a href={`/p/${p.slug}`}>страница</a> · <a href={`/cabinet/${p.token}`}>кабинет</a>{p.demo ? ' · тест' : ''}</div>)}
       <h2>Переписка</h2>
       {convs.map(c => (
         <div key={c.id} className="card">
