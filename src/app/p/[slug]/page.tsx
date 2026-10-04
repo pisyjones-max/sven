@@ -8,6 +8,7 @@ import { Ph } from '@/components/Ph'
 import { AdBanner } from '@/components/AdBanner'
 import { Stars } from '@/components/Stars'
 import { ClaimForm } from '@/components/ClaimForm'
+import { MyLevel } from '@/components/MyLevel'
 import { formatPhone } from '@/lib/phone'
 import { SITE_URL } from '@/lib/site'
 import { jsonLd } from '@/lib/schema'
@@ -52,6 +53,15 @@ export default async function PartnerPage({ params }: P) {
           {rating !== null && <p><Stars value={rating} count={p.rCount} /></p>}
           {p.desc && <p className="lead-text">{p.desc}</p>}
           <p className="tags">{cats.map(c => <Link key={c.slug} href={catHref(c)}><i>{c.title}</i></Link>)}</p>
+
+          {p.loyalty && (
+            <div className="card loy-card">
+              <h3>🎁 Скидки постоянным клиентам</h3>
+              <ul className="ticks">{p.loyalty.tiers.map(t => <li key={t.orders}>После {t.orders} выполненных заказов: скидка {t.percent}%</li>)}</ul>
+              <p className="muted small">Заказы всех в вашем кабинете копятся вместе, можно подключить семью по QR-коду. Скидку предоставляет компания, условия у каждой свои.</p>
+              <MyLevel slug={p.slug} />
+            </div>
+          )}
 
           {p.features && p.features.length > 0 && (
             <>

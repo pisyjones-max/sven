@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getOrders } from '@/lib/orders-client'
 
-interface Order { id: string; slug: string; partnerName: string; cat: string; createdAt: number; accepted: boolean; last: string; rating: { stars: number; comment: string } | null; paid: number | null }
+interface Level { done: number; percent: number; next: { orders: number; percent: number; left: number } | null }
+interface Order { loyalty: Level | null; id: string; slug: string; partnerName: string; cat: string; createdAt: number; accepted: boolean; last: string; rating: { stars: number; comment: string } | null; paid: number | null }
 
 function OrderCard({ o, onSaved }: { o: Order; onSaved: () => void }) {
   const [stars, setStars] = useState(o.rating?.stars ?? 0)
@@ -33,6 +34,13 @@ function OrderCard({ o, onSaved }: { o: Order; onSaved: () => void }) {
         <span className={`status ${o.accepted ? 'ok' : ''}`}>{o.accepted ? 'Компания ответила' : 'Ждём ответа'}</span>
       </div>
       <p className="muted small">{o.last}</p>
+      {o.loyalty && (
+        <div className="loy">
+          <b>🎁 {o.loyalty.percent > 0 ? `Ваша скидка у этой компании: ${o.loyalty.percent}%` : 'Скидка постоянного клиента'}</b>
+          <span className="muted small">Выполнено заказов: {o.loyalty.done}{o.loyalty.next ? `. Ещё ${o.loyalty.next.left} до скидки ${o.loyalty.next.percent}%` : '. Максимальная скидка'}</span>
+          {o.loyalty.next && <span className="bar"><i style={{ width: `${Math.min(100, (o.loyalty.done / o.loyalty.next.orders) * 100)}%` }} /></span>}
+        </div>
+      )}
       <Link className="btn ghost sm" href={`/p/${o.slug}`}>Открыть чат</Link>
       {o.accepted ? (
         <div className="rate">
@@ -83,7 +91,7 @@ function ShareCard({ devices, onChanged }: { devices: Device[]; onChanged: () =>
   return (
     <div className="card share">
       <h3>Поделиться кабинетом с близкими</h3>
-      <p className="muted">Родитель или друг наведёт камеру на QR-код или откроет ссылку и сразу окажется здесь. Регистрация не нужна.</p>
+      <p className="muted">Родитель или друг наведёт камеру на QR-код или откроет ссылку и сразу окажется здесь. Регистрация не нужна. Заказы всей семьи копят одну скидку у каждой компании, чем больше людей в кабинете, тем быстрее растёт скидка.</p>
       {!inv
         ? <button className="btn" onClick={make} disabled={busy}>{busy ? 'Готовим…' : 'Показать QR-код'}</button>
         : (

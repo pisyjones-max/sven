@@ -1,4 +1,5 @@
 import type { Partner } from './store'
+import { PRESETS } from './loyalty'
 
 type Item = { title: string; meta: string; price: string }
 const T = 1_700_000_000_000
@@ -7,7 +8,7 @@ function d(n: number, o: { slug: string; name: string; cat: string; city: string
   const id = `demo${String(n).padStart(2, '0')}`
   return {
     id, slug: o.slug, token: `demo-cabinet-${String(n).padStart(2, '0')}`, name: o.name, phone: `7999000${String(n).padStart(4, '0')}`,
-    cats: [o.cat], city: o.city, leads: 0, createdAt: T + n, desc: o.desc, since: o.since, price: o.price, features: o.features, items: o.items, demo: true,
+    cats: [o.cat], city: o.city, leads: 0, createdAt: T + n, desc: o.desc, since: o.since, price: o.price, features: o.features, items: o.items, demo: true, loyalty: { tiers: PRESETS.standard.tiers },
   }
 }
 

@@ -1,6 +1,7 @@
 import { Conv, Partner, getPartner, rememberTgMsg, saveConv, savePartner, partnerView } from './store'
 import { tgSend, tgAdmin } from './tg'
 import { SITE_URL } from './site'
+import { loyaltyFor } from './loyalty-server'
 
 // Клиент написал → уведомить партнёра (Telegram) и админа (копия, без масок)
 export async function notifyClientMessage(c: Conv, text: string, first: boolean) {
@@ -9,7 +10,9 @@ export async function notifyClientMessage(c: Conv, text: string, first: boolean)
   const view = partnerView(c)
   if (p.tgChatId) {
     const lastMasked = view.msgs[view.msgs.length - 1].text
-    const head = first ? `🏠 Новая заявка от ${c.clientName}` : `💬 ${c.clientName} пишет`
+    const lv = await loyaltyFor(p, c)
+    const gift = lv && lv.done > 0 ? `\n🎁 Постоянный клиент: выполнено ${lv.done}, скидка ${lv.percent}%` : ''
+    const head = (first ? `🏠 Новая заявка от ${c.clientName}` : `💬 ${c.clientName} пишет`) + gift
     const id = await tgSend(p.tgChatId, `${head}\n\n${lastMasked}\n\n↩️ Нажмите «Ответить» на это сообщение, чтобы написать клиенту. Контакт откроется после вашего первого ответа.`)
     if (id) await rememberTgMsg(p.tgChatId, id, c.id)
   }

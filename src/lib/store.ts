@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto'
 import { kvGet, kvSet, kvScanKeys } from './kv'
 import { maskContacts } from './mask'
 import { DEMO_PARTNERS } from './demo'
+import type { Tier } from './loyalty'
 
 export interface Partner {
   id: string
@@ -26,6 +27,7 @@ export interface Partner {
   imported?: boolean // добавлена импортом из открытого источника или от площадки-партнёра
   claimed?: boolean // владелец подтвердил компанию и получает заявки (для imported)
   source?: { name: string; url: string } // откуда данные: показываем со ссылкой
+  loyalty?: { tiers: Tier[] } // скидки постоянным клиентам, которые даёт компания
 }
 
 export interface Msg { from: 'client' | 'partner'; text: string; at: number }
@@ -41,6 +43,7 @@ export interface Conv {
   rating?: { stars: number; comment: string; at: number } // оценка клиента (можно исправить)
   paid?: number // сколько заплатил клиент, ₽ (по его отметке)
   acctId?: string // кабинет клиента, которому принадлежит заказ
+  done?: { at: number; amount?: number }[] // выполненные работы, подтверждает компания
 }
 
 const rid = (n = 8) => randomBytes(n).toString('hex')
@@ -89,7 +92,7 @@ function ensureDemo(): Promise<void> {
   return (g.__demoSeed ??= (async () => {
     for (const d of DEMO_PARTNERS) {
       const old = await kvGet<Partner>(`partner:${d.id}`)
-      await kvSet(`partner:${d.id}`, { ...d, leads: old?.leads ?? 0, tgChatId: old?.tgChatId, rSum: old?.rSum, rCount: old?.rCount })
+      await kvSet(`partner:${d.id}`, { ...d, leads: old?.leads ?? 0, tgChatId: old?.tgChatId, rSum: old?.rSum, rCount: old?.rCount, loyalty: old?.loyalty ?? d.loyalty })
       await kvSet(`pslug:${d.slug}`, d.id)
       await kvSet(`ptok:${d.token}`, d.id)
     }
@@ -222,4 +225,14 @@ export async function importPartner(i: ImportItem, validCats: Set<string>, valid
   await kvSet(`pslug:${p.slug}`, id)
   await kvSet(`ptok:${p.token}`, id)
   return 'created'
+}
+
+export async function markDone(convId: string, partnerId: string, amount?: number): Promise<Conv | null> {
+  const c = await getConv(convId)
+  if (!c || c.partnerId !== partnerId || !c.accepted) return null
+  const last = c.done?.[c.done.length - 1]
+  if (last && Date.now() - last.at < 60_000) return c // защита от двойного нажатия
+  c.done = [...(c.done ?? []), { at: Date.now(), amount }]
+  await saveConv(c)
+  return c
 }

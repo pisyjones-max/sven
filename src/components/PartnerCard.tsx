@@ -14,6 +14,7 @@ export function PartnerCard({ p }: { p: Partner }) {
         <span className="muted small">{getCity(p.city)?.name}{p.since ? ` · с ${p.since} года` : ''}</span>
         {avgRating(p) !== null && <Stars value={avgRating(p)!} count={p.rCount} />}
         {p.price && <span className="price">{p.price}</span>}
+        {p.loyalty && <span className="gift">🎁 Скидки постоянным клиентам до {Math.max(...p.loyalty.tiers.map(t => t.percent))}%</span>}
         {p.desc && <span className="pcard-desc">{p.desc.slice(0, 120)}{p.desc.length > 120 ? '…' : ''}</span>}
         <span className="tags">{p.cats.slice(0, 3).map(s => <i key={s}>{getCategory(s)?.title}</i>)}</span>
       </div>

@@ -1,5 +1,6 @@
 import { Conv, getPartner } from './store'
 import { getCategory } from './catalog'
+import { doneCount, levelFor } from './loyalty'
 
 export async function buildOrders(convs: Conv[]) {
   const orders = []
@@ -9,6 +10,7 @@ export async function buildOrders(convs: Conv[]) {
     orders.push({
       id: c.id, slug: p.slug, partnerName: p.name, cat: getCategory(p.cats[0])?.title ?? '',
       createdAt: c.createdAt, accepted: c.accepted, last: c.msgs[c.msgs.length - 1]?.text.slice(0, 120) ?? '',
+      loyalty: levelFor(p.loyalty?.tiers, doneCount(convs.filter(x => x.partnerId === c.partnerId))),
       rating: c.rating ? { stars: c.rating.stars, comment: c.rating.comment } : null, paid: c.paid ?? null,
     })
   }

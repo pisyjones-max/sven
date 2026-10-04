@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getConv, getPartnerByToken, listConvs, partnerView } from '@/lib/store'
 import { partnerReply } from '@/lib/chat'
+import { doneForPartner } from '@/lib/loyalty-server'
+import { levelFor } from '@/lib/loyalty'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   const p = await getPartnerByToken(req.nextUrl.searchParams.get('token') ?? '')
   if (!p) return NextResponse.json({ ok: false }, { status: 404 })
-  const convs = (await listConvs(p.id)).map(partnerView)
-  return NextResponse.json({ ok: true, partner: { name: p.name, slug: p.slug, leads: p.leads, tgBound: !!p.tgChatId }, convs })
+  const convs = await Promise.all((await listConvs(p.id)).map(async c => {
+    const done = await doneForPartner(p.id, c)
+    return { ...partnerView(c), done, level: levelFor(p.loyalty?.tiers, done) }
+  }))
+  return NextResponse.json({ ok: true, partner: { name: p.name, slug: p.slug, leads: p.leads, tgBound: !!p.tgChatId, tiers: p.loyalty?.tiers ?? null }, convs })
 }
 
 export async function POST(req: NextRequest) {
