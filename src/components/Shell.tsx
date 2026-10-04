@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { SITE_NAME } from '@/lib/site'
 import { KIND_LABEL, CATEGORIES, catHref } from '@/lib/catalog'
+import { OrdersLink } from './OrdersLink'
 
 export function Header() {
   return (
@@ -10,6 +11,7 @@ export function Header() {
         <nav>
           <Link href={`/${KIND_LABEL.zastroyshchiki.path}`}>Застройщики</Link>
           <Link href={`/${KIND_LABEL.uslugi.path}`}>Услуги</Link>
+          <OrdersLink />
           <Link href="/partner/register" className="btn sm">Для компаний</Link>
         </nav>
       </div>

@@ -146,3 +146,15 @@ label{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600}
 
 .biz .ticks.light li{color:var(--ink)}
 .pill-row{display:flex;flex-wrap:wrap;gap:8px}
+
+/* заказы, оценки, импорт */
+.orders-btn{display:inline-flex;align-items:center;gap:6px;background:#EEF3FF;color:var(--ink);border-radius:99px;padding:7px 12px;font-size:14px;font-weight:700;text-decoration:none;white-space:nowrap}
+.orders-btn b{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:99px;background:var(--cta);color:#fff;font-size:12px;padding:0 5px}
+.stars{display:inline-flex;align-items:center;gap:6px}.stars-i{color:#F5A524;letter-spacing:1px}.stars-i .off{color:#D5DAE6}
+.order-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.status{font-size:12px;font-weight:700;background:#FEF3C7;color:#78350F;border-radius:99px;padding:4px 10px}.status.ok{background:#D1FAE5;color:#065F46}
+.rate{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.star-pick{display:flex;gap:4px}.star-pick button{font-size:30px;line-height:1;background:none;border:0;color:#D5DAE6;cursor:pointer;padding:0 2px}.star-pick button.on{color:#F5A524}
+.review p{margin:6px 0}
+.contact{display:flex;flex-direction:column;gap:10px;margin:0}.contact h3{margin:0}.contact p{margin:0}
+.claim{display:flex;flex-direction:column;gap:8px;margin-top:6px}

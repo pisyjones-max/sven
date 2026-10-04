@@ -1,11 +1,14 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getPartnerBySlug } from '@/lib/store'
+import { getPartnerBySlug, avgRating, isLive, listReviews } from '@/lib/store'
 import { getCategory, getCity, catHref, ICON } from '@/lib/catalog'
 import { ChatWidget } from '@/components/ChatWidget'
 import { Ph } from '@/components/Ph'
 import { AdBanner } from '@/components/AdBanner'
+import { Stars } from '@/components/Stars'
+import { ClaimForm } from '@/components/ClaimForm'
+import { formatPhone } from '@/lib/phone'
 import { SITE_URL } from '@/lib/site'
 import { jsonLd } from '@/lib/schema'
 
@@ -31,6 +34,9 @@ export default async function PartnerPage({ params }: P) {
   const cats = p.cats.map(getCategory).filter((c): c is NonNullable<typeof c> => !!c)
   const main = cats[0]
   const icon = (main && ICON[main.slug]) || '🏠'
+  const live = isLive(p)
+  const rating = avgRating(p)
+  const reviews = await listReviews(p.id)
   const isBuilder = cats.some(c => c.kind === 'zastroyshchiki')
   return (
     <>
@@ -43,6 +49,7 @@ export default async function PartnerPage({ params }: P) {
           <p className="muted">
             {city?.name}{p.since ? ` · работаем с ${p.since} года` : ''}{p.price ? ` · ${p.price}` : ''}
           </p>
+          {rating !== null && <p><Stars value={rating} count={p.rCount} /></p>}
           {p.desc && <p className="lead-text">{p.desc}</p>}
           <p className="tags">{cats.map(c => <Link key={c.slug} href={catHref(c)}><i>{c.title}</i></Link>)}</p>
 
@@ -69,13 +76,34 @@ export default async function PartnerPage({ params }: P) {
             </>
           )}
 
+          {reviews.length > 0 && (
+            <>
+              <h2>Отзывы клиентов</h2>
+              {reviews.map((r, i) => (
+                <div key={i} className="card review">
+                  <Stars value={r.stars} />
+                  <p>{r.comment}</p>
+                  <span className="muted small">{r.name} · {new Date(r.at).toLocaleDateString('ru-RU')}</span>
+                </div>
+              ))}
+            </>
+          )}
+
           <h2>Фото работ</h2>
           <div className="gallery">
             {[0, 1, 2].map(i => <Ph key={i} seed={`${p.slug}-g${i}`} icon={icon} label="Фото" />)}
           </div>
         </div>
         <aside>
-          <ChatWidget slug={p.slug} partnerName={p.name} />
+          {live ? <ChatWidget slug={p.slug} partnerName={p.name} /> : (
+            <div className="card contact">
+              <h3>Контакты</h3>
+              {p.phone && <a className="btn big" href={`tel:+${p.phone}`}>Позвонить {formatPhone('+' + p.phone)}</a>}
+              {p.source && <a className="btn ghost big" href={p.source.url} target="_blank" rel="nofollow sponsored noopener">Подробнее на {p.source.name} →</a>}
+              <p className="muted small">Компания добавлена из открытого источника и пока не подключена к чату на платформе.</p>
+              <ClaimForm slug={p.slug} />
+            </div>
+          )}
           <AdBanner slot="side" seed={p.slug} />
         </aside>
       </div>

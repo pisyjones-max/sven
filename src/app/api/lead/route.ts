@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { normalizePhone, isPlausiblePhone } from '@/lib/phone'
-import { createConv, listPartners } from '@/lib/store'
+import { createConv, isLive, listPartners } from '@/lib/store'
 import { getCategory, getCity } from '@/lib/catalog'
 import { notifyClientMessage } from '@/lib/chat'
 import { kvSet } from '@/lib/kv'
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const extra = String(b.text ?? '').trim().slice(0, 1200)
   const text = `Заявка: ${cat.title}${city ? `, ${city.name}` : ''}.${extra ? ` ${extra}` : ''}`
 
-  const all = (await listPartners()).filter(p => p.cats.includes(cat.slug))
+  const all = (await listPartners()).filter(p => p.cats.includes(cat.slug) && isLive(p))
   const local = city && city.slug !== 'podmoskove' ? all.filter(p => p.city === city.slug || p.city === 'podmoskove') : all
   // Раздаём по очереди: у кого меньше принятых лидов, тот первым
   const chosen = (local.length ? local : all).sort((a, z) => a.leads - z.leads || a.createdAt - z.createdAt).slice(0, MAX_COMPANIES)

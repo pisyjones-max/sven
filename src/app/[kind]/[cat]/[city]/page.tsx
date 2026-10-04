@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getCategory, getCity, catHref } from '@/lib/catalog'
-import { listPartners } from '@/lib/store'
+import { listPartners, sortPartners } from '@/lib/store'
 import { CatalogView } from '@/components/CatalogView'
 
 export const revalidate = 60
@@ -23,6 +23,6 @@ export async function generateMetadata({ params }: P): Promise<Metadata> {
 export default async function CityPage({ params }: P) {
   const r = await resolve(params)
   if (!r) notFound()
-  const partners = (await listPartners()).filter(p => p.cats.includes(r.c.slug) && (p.city === r.ct.slug || p.city === 'podmoskove'))
+  const partners = sortPartners((await listPartners()).filter(p => p.cats.includes(r.c.slug) && (p.city === r.ct.slug || p.city === 'podmoskove')))
   return <CatalogView cat={r.c} city={r.ct} partners={partners} />
 }

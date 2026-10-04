@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { normalizePhone, isPlausiblePhone } from '@/lib/phone'
-import { createConv, getPartnerBySlug } from '@/lib/store'
+import { createConv, getPartnerBySlug, isLive } from '@/lib/store'
 import { notifyClientMessage } from '@/lib/chat'
 
 export async function POST(req: NextRequest) {
@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try { b = await req.json() } catch { return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 }) }
   if (b.website) return NextResponse.json({ ok: true, id: 'x' }) // honeypot
   const p = await getPartnerBySlug(String(b.slug ?? ''))
-  if (!p) return NextResponse.json({ ok: false, error: 'no_partner' }, { status: 404 })
+  if (!p || !isLive(p)) return NextResponse.json({ ok: false, error: 'no_partner' }, { status: 404 })
   const phoneRaw = String(b.phone ?? '')
   const phone = normalizePhone(phoneRaw)
   if (!phone || !isPlausiblePhone(phoneRaw)) return NextResponse.json({ ok: false, error: 'bad_phone' }, { status: 400 })

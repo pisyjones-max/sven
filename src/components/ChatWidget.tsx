@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { formatPhone } from '@/lib/phone'
+import { addOrder } from '@/lib/orders-client'
 
 interface Msg { from: 'client' | 'partner'; text: string; at: number }
 
@@ -18,9 +19,14 @@ export function ChatWidget({ slug, partnerName }: { slug: string; partnerName: s
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    try { setConvId(localStorage.getItem(key)) } catch { /* хранилище недоступно */ }
-  }, [key])
+    const t = setTimeout(() => {
+      try {
+        const id = localStorage.getItem(key)
+        if (id) { setConvId(id); addOrder({ id, slug }) }
+      } catch { /* хранилище недоступно */ }
+    }, 0)
+    return () => clearTimeout(t)
+  }, [key, slug])
 
   useEffect(() => {
     if (!convId) return
@@ -53,6 +59,7 @@ export function ChatWidget({ slug, partnerName }: { slug: string; partnerName: s
       else {
         try { localStorage.setItem(key, j.id) } catch { /* ok */ }
         setConvId(j.id)
+        addOrder({ id: j.id, slug })
         setMsgs([{ from: 'client', text, at: Date.now() }])
         setText('')
       }

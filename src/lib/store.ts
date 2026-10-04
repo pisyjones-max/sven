@@ -21,6 +21,11 @@ export interface Partner {
   features?: string[]
   items?: { title: string; meta: string; price: string }[]
   demo?: boolean // тестовая компания: не индексируется, в sitemap не попадает
+  rSum?: number // сумма оценок клиентов
+  rCount?: number // число оценок
+  imported?: boolean // добавлена импортом из открытого источника или от площадки-партнёра
+  claimed?: boolean // владелец подтвердил компанию и получает заявки (для imported)
+  source?: { name: string; url: string } // откуда данные: показываем со ссылкой
 }
 
 export interface Msg { from: 'client' | 'partner'; text: string; at: number }
@@ -33,6 +38,8 @@ export interface Conv {
   accepted: boolean // партнёр ответил: заявка засчитана как лид
   createdAt: number
   msgs: Msg[]
+  rating?: { stars: number; comment: string; at: number } // оценка клиента (можно исправить)
+  paid?: number // сколько заплатил клиент, ₽ (по его отметке)
 }
 
 const rid = (n = 8) => randomBytes(n).toString('hex')
@@ -48,7 +55,18 @@ export function slugify(s: string): string {
 }
 
 export async function createPartner(input: { name: string; phone: string; cats: string[]; city: string }): Promise<Partner | 'exists'> {
-  if (await kvGet<string>(`pphone:${input.phone}`)) return 'exists'
+  const existingId = await kvGet<string>(`pphone:${input.phone}`)
+  if (existingId) {
+    // Компанию с таким телефоном уже добавили импортом: владелец регистрируется и забирает страницу
+    const ex = await getPartner(existingId)
+    if (ex?.imported && !ex.claimed) {
+      ex.claimed = true
+      ex.cats = [...new Set([...ex.cats, ...input.cats])]
+      await savePartner(ex)
+      return ex
+    }
+    return 'exists'
+  }
   const id = rid(6)
   const base = slugify(input.name) || input.cats[0] || 'partner'
   const slug = `${base}-${rid(2)}`
@@ -70,7 +88,7 @@ function ensureDemo(): Promise<void> {
   return (g.__demoSeed ??= (async () => {
     for (const d of DEMO_PARTNERS) {
       const old = await kvGet<Partner>(`partner:${d.id}`)
-      await kvSet(`partner:${d.id}`, { ...d, leads: old?.leads ?? 0, tgChatId: old?.tgChatId })
+      await kvSet(`partner:${d.id}`, { ...d, leads: old?.leads ?? 0, tgChatId: old?.tgChatId, rSum: old?.rSum, rCount: old?.rCount })
       await kvSet(`pslug:${d.slug}`, d.id)
       await kvSet(`ptok:${d.token}`, d.id)
     }
@@ -138,3 +156,69 @@ export function partnerView(c: Conv) {
 // Привязка сообщения в Telegram → диалог (для ответа через «Ответить»)
 export const rememberTgMsg = (chatId: string, msgId: number, convId: string) => kvSet(`tgmsg:${chatId}:${msgId}`, convId)
 export const lookupTgMsg = (chatId: string, msgId: number) => kvGet<string>(`tgmsg:${chatId}:${msgId}`)
+
+// Может ли компания получать заявки и отвечать в чате
+export const isLive = (p: Partner) => !p.imported || !!p.claimed
+
+export const avgRating = (p: Partner): number | null => (p.rCount ? (p.rSum ?? 0) / p.rCount : null)
+
+// Байесовская оценка: одна пятёрка не обгоняет компанию с десятком хороших отзывов
+const partnerScore = (p: Partner) => ((p.rSum ?? 0) + 4 * 4) / ((p.rCount ?? 0) + 4)
+
+export const sortPartners = (list: Partner[]): Partner[] =>
+  [...list].sort((a, b) => Number(isLive(b)) - Number(isLive(a)) || partnerScore(b) - partnerScore(a) || b.leads - a.leads || a.createdAt - b.createdAt)
+
+export async function rateConv(id: string, stars: number, comment: string, paid?: number): Promise<'ok' | 'not_found' | 'not_accepted'> {
+  const c = await getConv(id)
+  if (!c) return 'not_found'
+  if (!c.accepted) return 'not_accepted' // оценивать можно только после ответа компании
+  const p = await getPartner(c.partnerId)
+  if (!p) return 'not_found'
+  const prev = c.rating?.stars ?? 0
+  p.rSum = (p.rSum ?? 0) - prev + stars
+  p.rCount = (p.rCount ?? 0) + (prev ? 0 : 1)
+  c.rating = { stars, comment, at: Date.now() }
+  if (paid !== undefined) c.paid = paid
+  await saveConv(c)
+  await savePartner(p)
+  return 'ok'
+}
+
+export async function listReviews(partnerId: string, limit = 6) {
+  const convs = await listConvs(partnerId)
+  return convs
+    .filter(c => c.rating && c.rating.comment)
+    .sort((a, b) => b.rating!.at - a.rating!.at)
+    .slice(0, limit)
+    .map(c => ({ name: c.clientName.split(' ')[0], stars: c.rating!.stars, comment: c.rating!.comment, at: c.rating!.at }))
+}
+
+export interface ImportItem {
+  name: string; cats: string[]; city?: string; phone?: string; desc?: string; since?: number; price?: string
+  features?: string[]; items?: { title: string; meta: string; price: string }[]; source?: { name: string; url: string }
+}
+
+// Импорт компаний из согласованного источника (JSON). Дубли по телефону или названию и району пропускаются.
+export async function importPartner(i: ImportItem, validCats: Set<string>, validCities: Set<string>, defSource?: { name: string; url: string }): Promise<'created' | 'skipped' | 'invalid'> {
+  const name = String(i.name ?? '').trim().slice(0, 120)
+  const cats = (Array.isArray(i.cats) ? i.cats : []).filter(c => validCats.has(c)).slice(0, 12)
+  if (!name || !cats.length) return 'invalid'
+  const city = i.city && validCities.has(i.city) ? i.city : 'podmoskove'
+  const phone = i.phone ? (await import('./phone')).normalizePhone(String(i.phone)) : null
+  const nameKey = `pname:${slugify(name)}:${city}`
+  if ((phone && (await kvGet<string>(`pphone:${phone}`))) || (await kvGet<string>(nameKey))) return 'skipped'
+  const id = rid(6)
+  const p: Partner = {
+    id, slug: `${slugify(name) || 'company'}-${rid(2)}`, token: rid(16), name, phone: phone ?? '', cats, city, leads: 0, createdAt: Date.now(),
+    desc: i.desc ? String(i.desc).slice(0, 600) : undefined, since: i.since, price: i.price ? String(i.price).slice(0, 80) : undefined,
+    features: Array.isArray(i.features) ? i.features.slice(0, 8).map(x => String(x).slice(0, 120)) : undefined,
+    items: Array.isArray(i.items) ? i.items.slice(0, 12) : undefined,
+    imported: true, claimed: false, source: i.source ?? defSource,
+  }
+  await savePartner(p)
+  if (phone) await kvSet(`pphone:${phone}`, id)
+  await kvSet(nameKey, id)
+  await kvSet(`pslug:${p.slug}`, id)
+  await kvSet(`ptok:${p.token}`, id)
+  return 'created'
+}

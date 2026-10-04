@@ -11,14 +11,16 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   if (!process.env.ADMIN_KEY || key !== process.env.ADMIN_KEY) return <p>Нет доступа</p>
   const [partners, convs] = await Promise.all([listPartners(), listAllConvs()])
   const orphans = (await Promise.all((await kvScanKeys('orphan:*')).map(k => kvGet<{ id: string; cat: string; name: string; phone: string; text: string; at: number }>(k)))).filter((o): o is NonNullable<typeof o> => !!o).sort((a, b) => b.at - a.at)
+  const claims = (await Promise.all((await kvScanKeys('claim:*')).map(k => kvGet<{ id: string; slug: string; partner: string; name: string; phone: string; at: number }>(k)))).filter((o): o is NonNullable<typeof o> => !!o).sort((a, b) => b.at - a.at)
   const byId = new Map(partners.map(p => [p.id, p]))
   return (
     <>
       <h1>Админка</h1>
       <p>Партнёров: {partners.length} · Диалогов: {convs.length} · Принято лидов: {partners.reduce((s, p) => s + p.leads, 0)}</p>
       {orphans.length > 0 && <><h2>Заявки без компаний ({orphans.length})</h2>{orphans.map(o => <div key={o.id} className="card"><b>{o.name} +{o.phone}</b> · {o.cat}<p className="small">{o.text}</p></div>)}</>}
+      {claims.length > 0 && <><h2>Хотят забрать компанию ({claims.length})</h2>{claims.map(o => <div key={o.id} className="card"><b>{o.partner}</b>: {o.name} +{o.phone} · <a href={`/p/${o.slug}`}>страница</a></div>)}</>}
       <h2>Партнёры</h2>
-      {partners.map(p => <div key={p.id} className="card"><b>{p.name}</b> +{p.phone} · {p.cats.join(', ')} · {p.city} · лидов: {p.leads} · TG: {p.tgChatId ? 'да' : 'нет'} · <a href={`/p/${p.slug}`}>страница</a> · <a href={`/cabinet/${p.token}`}>кабинет</a>{p.demo ? ' · тест' : ''}</div>)}
+      {partners.map(p => <div key={p.id} className="card"><b>{p.name}</b> +{p.phone} · {p.cats.join(', ')} · {p.city} · лидов: {p.leads} · TG: {p.tgChatId ? 'да' : 'нет'} · <a href={`/p/${p.slug}`}>страница</a> · <a href={`/cabinet/${p.token}`}>кабинет</a>{p.demo ? ' · тест' : ''}{p.imported ? (p.claimed ? ' · импорт, забрана' : ' · импорт') : ''}{p.rCount ? ` · ★ ${((p.rSum ?? 0) / p.rCount).toFixed(1)} (${p.rCount})` : ''}</div>)}
       <h2>Переписка</h2>
       {convs.map(c => (
         <div key={c.id} className="card">

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CATEGORIES, CITIES, KIND_LABEL, Kind } from '@/lib/catalog'
 import { formatPhone } from '@/lib/phone'
+import { addOrder } from '@/lib/orders-client'
 
 interface Sent { slug: string; name: string; convId: string }
 
@@ -29,7 +30,7 @@ export function LeadForm({ cat, city, title = 'Подберём исполнит
       const j = await r.json()
       if (!j.ok) setErr(j.error === 'bad_phone' ? 'Проверьте номер телефона' : j.error === 'no_consent' ? 'Нужно согласие на обработку данных' : j.error === 'no_cat' ? 'Выберите, что нужно' : 'Не удалось отправить, попробуйте ещё раз')
       else {
-        for (const s of j.sent as Sent[]) { try { localStorage.setItem(`doma-chat:${s.slug}`, s.convId) } catch { /* ok */ } }
+        for (const s of j.sent as Sent[]) { try { localStorage.setItem(`doma-chat:${s.slug}`, s.convId) } catch { /* ok */ } addOrder({ id: s.convId, slug: s.slug }) }
         setDone({ sent: j.sent, waiting: j.sent.length === 0 })
       }
     } catch { setErr('Нет связи, попробуйте ещё раз') }

@@ -1,0 +1,14 @@
+{
+  "source": { "name": "Название площадки-партнёра", "url": "https://example.com" },
+  "companies": [
+    {
+      "name": "Септик-Мастер",
+      "cats": ["otkachka-septika"],
+      "city": "ramenskoe",
+      "phone": "+7 (926) 000-00-01",
+      "desc": "Откачка септиков и выгребных ям, выезд в день обращения.",
+      "price": "Откачка от 3 000 ₽",
+      "source": { "name": "Площадка-партнёр", "url": "https://example.com/company/septik-master" }
+    }
+  ]
+}
