@@ -7,7 +7,7 @@ export function Header() {
   return (
     <header className="hdr">
       <div className="wrap hdr-in">
-        <Link href="/" className="logo"><span className="logo-mark">⌂</span>{SITE_NAME}</Link>
+        <Link href="/" className="logo"><span className="logo-mark">⌂</span><span className="logo-text">{SITE_NAME}</span></Link>
         <nav>
           <Link href={`/${KIND_LABEL.zastroyshchiki.path}`}>Застройщики</Link>
           <Link href={`/${KIND_LABEL.uslugi.path}`}>Услуги</Link>

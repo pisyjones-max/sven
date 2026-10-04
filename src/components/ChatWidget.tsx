@@ -23,6 +23,9 @@ export function ChatWidget({ slug, partnerName }: { slug: string; partnerName: s
       try {
         const id = localStorage.getItem(key)
         if (id) { setConvId(id); addOrder({ id, slug }) }
+        else {
+          fetch(`/api/me/conv?slug=${slug}`, { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.id) setConvId(j.id) }).catch(() => {})
+        }
       } catch { /* хранилище недоступно */ }
     }, 0)
     return () => clearTimeout(t)

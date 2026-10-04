@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { normalizePhone, isPlausiblePhone } from '@/lib/phone'
 import { createConv, isLive, listPartners } from '@/lib/store'
+import { attachConv, ensureAccount } from '@/lib/account'
 import { getCategory, getCity } from '@/lib/catalog'
 import { notifyClientMessage } from '@/lib/chat'
 import { kvSet } from '@/lib/kv'
@@ -32,9 +33,11 @@ export async function POST(req: NextRequest) {
   // Раздаём по очереди: у кого меньше принятых лидов, тот первым
   const chosen = (local.length ? local : all).sort((a, z) => a.leads - z.leads || a.createdAt - z.createdAt).slice(0, MAX_COMPANIES)
 
+  const acct = chosen.length ? await ensureAccount(req.headers.get('user-agent') ?? '') : null
   const sent: { slug: string; name: string; convId: string }[] = []
   for (const p of chosen) {
-    const c = await createConv(p.id, name, phone, text)
+    const c = await createConv(p.id, name, phone, text, acct?.acctId)
+    if (acct) await attachConv(acct.acctId, c.id)
     await notifyClientMessage(c, text, true)
     sent.push({ slug: p.slug, name: p.name, convId: c.id })
   }
