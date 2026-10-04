@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { CATEGORIES, CITIES, KIND_LABEL, Kind } from '@/lib/catalog'
 import { formatPhone } from '@/lib/phone'
 import { addOrder } from '@/lib/orders-client'
+import { TgNotify } from './TgNotify'
 
 interface Sent { slug: string; name: string; convId: string }
 
@@ -46,6 +47,7 @@ export function LeadForm({ cat, city, title = 'Подберём исполнит
           : <>
               <p>Компании ответят в чате. Откройте нужную, чтобы продолжить разговор:</p>
               <div className="sent">{done.sent.map(s => <Link key={s.slug} className="btn ghost" href={`/p/${s.slug}`}>{s.name}</Link>)}</div>
+              <TgNotify />
               <p className="muted small">Вернитесь на страницу компании позже, переписка сохранится.</p>
             </>}
       </div>

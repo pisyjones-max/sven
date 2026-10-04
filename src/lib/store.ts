@@ -28,6 +28,10 @@ export interface Partner {
   claimed?: boolean // владелец подтвердил компанию и получает заявки (для imported)
   source?: { name: string; url: string } // откуда данные: показываем со ссылкой
   loyalty?: { tiers: Tier[] } // скидки постоянным клиентам, которые даёт компания
+  phoneVerified?: boolean // телефон подтверждён кодом из SMS
+  verified?: boolean // проверена платформой (ставит админ)
+  respSum?: number // сумма времени до первого ответа, мс
+  respCount?: number
 }
 
 export interface Msg { from: 'client' | 'partner'; text: string; at: number }
@@ -44,6 +48,7 @@ export interface Conv {
   paid?: number // сколько заплатил клиент, ₽ (по его отметке)
   acctId?: string // кабинет клиента, которому принадлежит заказ
   done?: { at: number; amount?: number }[] // выполненные работы, подтверждает компания
+  complaint?: { reason: string; at: number } // компания пожаловалась: заявка не по теме или спам
 }
 
 const rid = (n = 8) => randomBytes(n).toString('hex')
@@ -92,7 +97,7 @@ function ensureDemo(): Promise<void> {
   return (g.__demoSeed ??= (async () => {
     for (const d of DEMO_PARTNERS) {
       const old = await kvGet<Partner>(`partner:${d.id}`)
-      await kvSet(`partner:${d.id}`, { ...d, leads: old?.leads ?? 0, tgChatId: old?.tgChatId, rSum: old?.rSum, rCount: old?.rCount, loyalty: old?.loyalty ?? d.loyalty })
+      await kvSet(`partner:${d.id}`, { ...d, leads: old?.leads ?? 0, tgChatId: old?.tgChatId, rSum: old?.rSum, rCount: old?.rCount, loyalty: old?.loyalty ?? d.loyalty, verified: old?.verified, respSum: old?.respSum, respCount: old?.respCount })
       await kvSet(`pslug:${d.slug}`, d.id)
       await kvSet(`ptok:${d.token}`, d.id)
     }
@@ -152,6 +157,7 @@ export function partnerView(c: Conv) {
     clientName: c.clientName,
     clientPhone: c.accepted ? c.clientPhone : null,
     accepted: c.accepted,
+    complaint: !!c.complaint,
     createdAt: c.createdAt,
     msgs: c.msgs.map(m => (m.from === 'client' && !c.accepted ? { ...m, text: maskContacts(m.text) } : m)),
   }
@@ -235,4 +241,19 @@ export async function markDone(convId: string, partnerId: string, amount?: numbe
   c.done = [...(c.done ?? []), { at: Date.now(), amount }]
   await saveConv(c)
   return c
+}
+
+// Среднее время до первого ответа, мс. Показываем от трёх ответов, чтобы не вводить в заблуждение.
+export const avgResponseMs = (p: Partner): number | null => ((p.respCount ?? 0) >= 3 ? (p.respSum ?? 0) / p.respCount! : null)
+
+export async function complainConv(convId: string, partnerId: string, reason: string): Promise<boolean> {
+  const c = await getConv(convId)
+  if (!c || c.partnerId !== partnerId || c.complaint) return false
+  c.complaint = { reason, at: Date.now() }
+  await saveConv(c)
+  if (c.accepted) {
+    const p = await getPartner(partnerId)
+    if (p) { p.leads = Math.max(0, p.leads - 1); await savePartner(p) } // заявка не засчитывается
+  }
+  return true
 }

@@ -3,6 +3,7 @@ import { Partner, avgRating } from '@/lib/store'
 import { getCategory, getCity, ICON } from '@/lib/catalog'
 import { Ph } from './Ph'
 import { Stars } from './Stars'
+import { TrustBadges } from './TrustBadges'
 
 export function PartnerCard({ p }: { p: Partner }) {
   const main = getCategory(p.cats[0])
@@ -13,6 +14,7 @@ export function PartnerCard({ p }: { p: Partner }) {
         <b className="pcard-name">{p.name}{p.demo && <em className="badge">тест</em>}</b>
         <span className="muted small">{getCity(p.city)?.name}{p.since ? ` · с ${p.since} года` : ''}</span>
         {avgRating(p) !== null && <Stars value={avgRating(p)!} count={p.rCount} />}
+        <TrustBadges p={p} compact />
         {p.price && <span className="price">{p.price}</span>}
         {p.loyalty && <span className="gift">🎁 Скидки постоянным клиентам до {Math.max(...p.loyalty.tiers.map(t => t.percent))}%</span>}
         {p.desc && <span className="pcard-desc">{p.desc.slice(0, 120)}{p.desc.length > 120 ? '…' : ''}</span>}

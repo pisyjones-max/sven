@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { formatPhone } from '@/lib/phone'
 import { addOrder } from '@/lib/orders-client'
+import { TgNotify } from './TgNotify'
 
 interface Msg { from: 'client' | 'partner'; text: string; at: number }
 
@@ -106,6 +107,7 @@ export function ChatWidget({ slug, partnerName }: { slug: string; partnerName: s
         <input placeholder="Сообщение" value={text} onChange={e => setText(e.target.value)} />
         <button className="btn">→</button>
       </form>
+      <TgNotify />
       <p className="muted small">Ответ появится здесь. Вернитесь на эту страницу позже, чат сохранится.</p>
     </div>
   )

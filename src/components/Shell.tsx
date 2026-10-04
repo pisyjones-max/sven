@@ -39,6 +39,7 @@ export function Footer() {
           <div>
             <b>Компаниям</b>
             <Link href="/partner/register">Разместить компанию</Link>
+            <Link href="/login">Войти по номеру</Link>
             <Link href="/privacy">Политика данных</Link>
           </div>
         </div>

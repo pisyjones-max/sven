@@ -2,6 +2,7 @@ import { Conv, Partner, getPartner, rememberTgMsg, saveConv, savePartner, partne
 import { tgSend, tgAdmin } from './tg'
 import { SITE_URL } from './site'
 import { loyaltyFor } from './loyalty-server'
+import { getAccount } from './account'
 
 // Клиент написал → уведомить партнёра (Telegram) и админа (копия, без масок)
 export async function notifyClientMessage(c: Conv, text: string, first: boolean) {
@@ -26,6 +27,8 @@ export async function partnerReply(c: Conv, p: Partner, text: string) {
   c.accepted = true
   await saveConv(c)
   if (firstAccept) {
+    p.respSum = (p.respSum ?? 0) + (Date.now() - c.msgs[0].at)
+    p.respCount = (p.respCount ?? 0) + 1
     p.leads += 1
     await savePartner(p)
     if (p.tgChatId) {
@@ -33,5 +36,13 @@ export async function partnerReply(c: Conv, p: Partner, text: string) {
       if (id) await rememberTgMsg(p.tgChatId, id, c.id)
     }
   }
+  await notifyClientReply(c, p, text)
   await tgAdmin(`👁 [${p.name}] ответ → ${c.clientName}${firstAccept ? ' (ЛИД ПРИНЯТ)' : ''}\n${text}`)
+}
+
+// Компания ответила → сообщить клиенту и всем, кто подключил Telegram к его кабинету
+async function notifyClientReply(c: Conv, p: Partner, text: string) {
+  if (!c.acctId) return
+  const a = await getAccount(c.acctId)
+  for (const chat of a?.tgChatIds ?? []) await tgSend(chat, `💬 ${p.name}:\n${text}\n\nОтветить: ${SITE_URL}/p/${p.slug}`)
 }

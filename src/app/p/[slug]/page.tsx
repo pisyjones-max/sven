@@ -9,6 +9,7 @@ import { AdBanner } from '@/components/AdBanner'
 import { Stars } from '@/components/Stars'
 import { ClaimForm } from '@/components/ClaimForm'
 import { MyLevel } from '@/components/MyLevel'
+import { TrustBadges } from '@/components/TrustBadges'
 import { formatPhone } from '@/lib/phone'
 import { SITE_URL } from '@/lib/site'
 import { jsonLd } from '@/lib/schema'
@@ -50,6 +51,7 @@ export default async function PartnerPage({ params }: P) {
           <p className="muted">
             {city?.name}{p.since ? ` · работаем с ${p.since} года` : ''}{p.price ? ` · ${p.price}` : ''}
           </p>
+          <TrustBadges p={p} />
           {rating !== null && <p><Stars value={rating} count={p.rCount} /></p>}
           {p.desc && <p className="lead-text">{p.desc}</p>}
           <p className="tags">{cats.map(c => <Link key={c.slug} href={catHref(c)}><i>{c.title}</i></Link>)}</p>

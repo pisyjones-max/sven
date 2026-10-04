@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { normalizePhone, isPlausiblePhone } from '@/lib/phone'
-import { createPartner } from '@/lib/store'
+import { createPartner, savePartner } from '@/lib/store'
+import { checkCode, smsEnabled } from '@/lib/sms'
 import { CATEGORIES, CITIES } from '@/lib/catalog'
 import { tgAdmin } from '@/lib/tg'
 import { SITE_URL, TG_BOT } from '@/lib/site'
@@ -19,7 +20,11 @@ export async function POST(req: NextRequest) {
   const city = CITIES.some(c => c.slug === b.city) ? String(b.city) : 'podmoskove'
   const name = String(b.name ?? '').trim().slice(0, 80) || 'Партнёр'
 
+  // Если SMS подключён, телефон компании подтверждается кодом (заодно защищает чужие импортированные страницы)
+  const verified = smsEnabled()
+  if (verified && !(await checkCode(phone, String(b.code ?? '')))) return NextResponse.json({ ok: false, error: 'need_code' }, { status: 400 })
   const p = await createPartner({ name, phone, cats, city })
+  if (p !== 'exists' && verified) { p.phoneVerified = true; await savePartner(p) }
   if (p === 'exists') return NextResponse.json({ ok: false, error: 'exists' }, { status: 409 })
 
   await tgAdmin(`🆕 Новый партнёр: ${p.name}, +${p.phone}\nКатегории: ${cats.join(', ')}\n${SITE_URL}/p/${p.slug}`)

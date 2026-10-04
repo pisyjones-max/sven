@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getConv, getPartnerByToken, listPartners, lookupTgMsg, savePartner } from '@/lib/store'
 import { partnerReply } from '@/lib/chat'
+import { bindTelegram } from '@/lib/account'
 import { tgSend, webhookSecret } from '@/lib/tg'
 import { SITE_URL } from '@/lib/site'
 
@@ -24,6 +25,11 @@ export async function POST(req: NextRequest) {
   // /start <token>: привязка Telegram к партнёру
   if (text.startsWith('/start')) {
     const token = text.split(/\s+/)[1] ?? ''
+    if (token.startsWith('c_')) {
+      const ok = await bindTelegram(token.slice(2), chatId)
+      await tgSend(chatId, ok ? `Готово! Сообщим сюда, когда компании ответят.\nВаши заказы: ${SITE_URL}/orders` : 'Ссылка устарела. Откройте сайт и нажмите кнопку подключения Telegram ещё раз.')
+      return NextResponse.json({ ok: true })
+    }
     const p = token ? await getPartnerByToken(token) : null
     if (p) {
       p.tgChatId = chatId

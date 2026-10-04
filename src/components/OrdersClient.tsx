@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getOrders } from '@/lib/orders-client'
+import { SmsCodeForm } from './SmsCodeForm'
+import { TgNotify } from './TgNotify'
 
 interface Level { done: number; percent: number; next: { orders: number; percent: number; left: number } | null }
 interface Order { loyalty: Level | null; id: string; slug: string; partnerName: string; cat: string; createdAt: number; accepted: boolean; last: string; rating: { stars: number; comment: string } | null; paid: number | null }
@@ -58,8 +60,26 @@ function OrderCard({ o, onSaved }: { o: Order; onSaved: () => void }) {
 }
 
 interface Device { id: string; label: string; role: 'owner' | 'guest'; at: number; current: boolean }
-interface Me { role?: 'owner' | 'guest'; orders: Order[]; devices?: Device[]; none?: boolean }
+interface Me { role?: 'owner' | 'guest'; orders: Order[]; devices?: Device[]; none?: boolean; phone?: string | null; tg?: number }
 interface Invite { url: string; svg: string; expires: number; max: number }
+
+function AccountCard({ me, onChanged }: { me: Me; onChanged: () => void }) {
+  return (
+    <div className="card">
+      <h3>Защита кабинета и уведомления</h3>
+      {me.phone
+        ? <p>✓ Номер привязан: <b>{me.phone}</b>. С любого устройства можно войти по коду из SMS, кабинет не потеряется.</p>
+        : <>
+            <p className="muted">Привяжите номер телефона: если потеряете телефон или очистите браузер, вернёте все заказы по коду из SMS.</p>
+            <SmsCodeForm cta="Привязать номер" onDone={onChanged} />
+          </>}
+      <div className="tg-row">
+        {me.tg ? <p>✓ Telegram подключён ({me.tg}). Ответы компаний приходят туда.</p> : <p className="muted">Узнавайте об ответах компаний сразу, не заходя на сайт.</p>}
+        <TgNotify />
+      </div>
+    </div>
+  )
+}
 
 function ShareCard({ devices, onChanged }: { devices: Device[]; onChanged: () => void }) {
   const [inv, setInv] = useState<Invite | null>(null)
@@ -151,11 +171,12 @@ export function OrdersClient({ joined, badInvite }: { joined: boolean; badInvite
       {joined && me.role === 'guest' && <div className="notice ok"><b>Готово, вы в кабинете.</b> Здесь заказы и переписки вашего близкого. Можно писать компаниям и оставлять оценки.</div>}
       {badInvite && <div className="notice bad">Ссылка устарела или уже использована. Попросите прислать новую.</div>}
       {!orders.length
-        ? <div className="card"><p>Заказов пока нет. Напишите любой компании или оставьте заявку, и они появятся здесь.</p><Link className="btn" href="/">На главную</Link></div>
+        ? <div className="card"><p>Заказов пока нет. Напишите любой компании или оставьте заявку, и они появятся здесь.</p><p><Link className="btn" href="/">На главную</Link></p><p className="muted small">Уже заказывали с другого устройства? <Link href="/login">Войти по номеру телефона</Link></p></div>
         : <>
             <p className="muted">Заказов: <b>{orders.length}</b>{total > 0 && <> · Потрачено по отметкам: <b>{total.toLocaleString('ru-RU')} ₽</b></>}</p>
             {orders.map(o => <OrderCard key={o.id} o={o} onSaved={load} />)}
           </>}
+      {me.role === 'owner' && <AccountCard me={me} onChanged={load} />}
       {me.role === 'owner' && <ShareCard devices={me.devices ?? []} onChanged={load} />}
       {me.role === 'guest' && <p><button className="link" onClick={leave}>Выйти из этого кабинета на этом устройстве</button></p>}
     </>

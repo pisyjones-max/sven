@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 interface Msg { from: 'client' | 'partner'; text: string; at: number }
 interface Level { done: number; percent: number; next: { orders: number; percent: number; left: number } | null }
-interface Conv { id: string; clientName: string; clientPhone: string | null; accepted: boolean; createdAt: number; msgs: Msg[]; done: number; level: Level | null }
+interface Conv { complaint: boolean; id: string; clientName: string; clientPhone: string | null; accepted: boolean; createdAt: number; msgs: Msg[]; done: number; level: Level | null }
 interface Tier { orders: number; percent: number }
 interface Data { partner: { name: string; slug: string; leads: number; tgBound: boolean; tiers: Tier[] | null }; convs: Conv[] }
 
@@ -67,6 +67,12 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
     load()
   }
 
+  async function complain() {
+    if (!open || !window.confirm('Заявка не по теме или спам? Она не будет засчитана.')) return
+    await fetch('/api/cabinet/complain', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, id: open, reason: 'не по теме или спам' }) }).catch(() => {})
+    load()
+  }
+
   if (bad) return <p className="card">Ссылка кабинета неверна.</p>
   if (!data) return <p className="muted">Загрузка…</p>
   const cur = data.convs.find(c => c.id === open)
@@ -84,7 +90,10 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
           <button className="link" onClick={() => setOpen(null)}>← Все заявки</button>
           <h3>{cur.clientName} {cur.clientPhone ? `· +${cur.clientPhone}` : '· контакт откроется после вашего ответа'}</h3>
           {cur.done > 0 && <p className="notice ok small">Постоянный клиент: выполнено заказов {cur.done}{cur.level && cur.level.percent > 0 ? `, скидка ${cur.level.percent}%` : ''}</p>}
-          {cur.accepted && (
+          {cur.complaint
+            ? <p className="notice bad small">Жалоба отправлена, заявка не засчитана.</p>
+            : <button className="link small" onClick={complain}>🚩 Не по теме / спам</button>}
+          {cur.accepted && !cur.complaint && (
             <div className="row done-row">
               <input inputMode="numeric" placeholder="Сумма работы, ₽ (необязательно)" value={amount} onChange={e => setAmount(e.target.value.replace(/\D/g, ''))} />
               <button className="btn ghost sm" onClick={markDone}>Работа выполнена</button>

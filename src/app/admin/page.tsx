@@ -20,11 +20,11 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       {orphans.length > 0 && <><h2>Заявки без компаний ({orphans.length})</h2>{orphans.map(o => <div key={o.id} className="card"><b>{o.name} +{o.phone}</b> · {o.cat}<p className="small">{o.text}</p></div>)}</>}
       {claims.length > 0 && <><h2>Хотят забрать компанию ({claims.length})</h2>{claims.map(o => <div key={o.id} className="card"><b>{o.partner}</b>: {o.name} +{o.phone} · <a href={`/p/${o.slug}`}>страница</a></div>)}</>}
       <h2>Партнёры</h2>
-      {partners.map(p => <div key={p.id} className="card"><b>{p.name}</b> +{p.phone} · {p.cats.join(', ')} · {p.city} · лидов: {p.leads} · TG: {p.tgChatId ? 'да' : 'нет'} · <a href={`/p/${p.slug}`}>страница</a> · <a href={`/cabinet/${p.token}`}>кабинет</a>{p.demo ? ' · тест' : ''}{p.imported ? (p.claimed ? ' · импорт, забрана' : ' · импорт') : ''}{p.rCount ? ` · ★ ${((p.rSum ?? 0) / p.rCount).toFixed(1)} (${p.rCount})` : ''}</div>)}
+      {partners.map(p => <div key={p.id} className="card"><b>{p.name}</b> +{p.phone} · {p.cats.join(', ')} · {p.city} · лидов: {p.leads} · TG: {p.tgChatId ? 'да' : 'нет'} · <a href={`/p/${p.slug}`}>страница</a> · <a href={`/cabinet/${p.token}`}>кабинет</a>{p.demo ? ' · тест' : ''}{p.phoneVerified ? ' · тел. подтверждён' : ''}{p.verified ? ' · ПРОВЕРЕНА' : ''} · <a href={`/api/admin/verify?key=${encodeURIComponent(key ?? '')}&slug=${p.slug}&on=${p.verified ? 0 : 1}`}>{p.verified ? 'снять проверку' : 'проверить'}</a>{p.imported ? (p.claimed ? ' · импорт, забрана' : ' · импорт') : ''}{p.rCount ? ` · ★ ${((p.rSum ?? 0) / p.rCount).toFixed(1)} (${p.rCount})` : ''}</div>)}
       <h2>Переписка</h2>
       {convs.map(c => (
         <div key={c.id} className="card">
-          <b>{c.clientName} +{c.clientPhone}</b> → {byId.get(c.partnerId)?.name} {c.accepted ? '✅ лид' : '🆕'}
+          <b>{c.clientName} +{c.clientPhone}</b> → {byId.get(c.partnerId)?.name} {c.accepted ? '✅ лид' : '🆕'}{c.complaint ? ` 🚩 жалоба: ${c.complaint.reason}` : ''}
           {c.msgs.map((m, i) => <p key={i} className="small">{m.from === 'client' ? '👤' : '🏢'} {m.text}</p>)}
         </div>
       ))}
