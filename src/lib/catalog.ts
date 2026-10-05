@@ -7,6 +7,7 @@ export interface Category {
   h1: string // «… в Раменском» подставляется к h1
   lead: number // стоимость лида, ₽ (для начисления)
   blurb: string
+  hot?: boolean // быстрые ходовые услуги: с них начинаем
 }
 
 export const CATEGORIES: Category[] = [
@@ -24,14 +25,18 @@ export const CATEGORIES: Category[] = [
     blurb: 'Гаражи, навесы для авто и хозблоки: каркасные, из блоков и металлоконструкций.' },
   { slug: 'parkovka-plitka', kind: 'uslugi', title: 'Парковка и дорожки плиткой', h1: 'Укладка плитки: парковка и дорожки', lead: 300,
     blurb: 'Мощение парковки, дорожек и площадок тротуарной плиткой с основанием и бордюрами.' },
-  { slug: 'pokos-travy', kind: 'uslugi', title: 'Покос травы', h1: 'Покос травы и уход за участком', lead: 200,
+  { slug: 'pokos-travy', kind: 'uslugi', hot: true, title: 'Покос травы', h1: 'Покос травы и уход за участком', lead: 200,
     blurb: 'Покос травы триммером и косилкой, расчистка заросших участков.' },
-  { slug: 'vyvoz-musora', kind: 'uslugi', title: 'Вывоз мусора', h1: 'Вывоз строительного и бытового мусора', lead: 200,
+  { slug: 'vyvoz-musora', kind: 'uslugi', hot: true, title: 'Вывоз мусора', h1: 'Вывоз строительного и бытового мусора', lead: 200,
     blurb: 'Вывоз мусора после строительства и уборки участка, контейнеры и газель.' },
-  { slug: 'otkachka-septika', kind: 'uslugi', title: 'Откачка септиков', h1: 'Откачка септиков и выгребных ям', lead: 200,
+  { slug: 'otkachka-septika', kind: 'uslugi', hot: true, title: 'Откачка септиков', h1: 'Откачка септиков и выгребных ям', lead: 200,
     blurb: 'Откачка септиков, выгребных ям и очистных, выезд ассенизатора на участок.' },
-  { slug: 'uborka-snega', kind: 'uslugi', title: 'Уборка снега', h1: 'Уборка снега и чистка крыш', lead: 200,
+  { slug: 'uborka-snega', kind: 'uslugi', hot: true, title: 'Уборка снега', h1: 'Уборка снега и чистка крыш', lead: 200,
     blurb: 'Расчистка участка и подъездов от снега, чистка кровли от снега и наледи.' },
+  { slug: 'uborka-uchastka', kind: 'uslugi', hot: true, title: 'Уборка и расчистка участка', h1: 'Уборка и расчистка участка', lead: 200,
+    blurb: 'Расчистка заросшего участка, вывоз веток и листвы, уборка территории после зимы или стройки.' },
+  { slug: 'spil-derevev', kind: 'uslugi', hot: true, title: 'Спил деревьев', h1: 'Спил и удаление деревьев', lead: 300,
+    blurb: 'Спил и удаление деревьев, обрезка веток, вывоз и распил на дрова.' },
 ]
 
 export const KIND_LABEL: Record<Kind, { title: string; path: string }> = {
@@ -60,5 +65,24 @@ export const catHref = (c: Category, citySlug?: string) =>
 
 export const ICON: Record<string, string> = {
   'stroyat-i-prodayut': '🏘️', 'pod-zakaz': '🏗️', 'gotovye-doma': '🏡', zabor: '🧱', krovlya: '🏠', garazh: '🚗',
-  'parkovka-plitka': '🅿️', 'pokos-travy': '🌿', 'vyvoz-musora': '🚛', 'otkachka-septika': '🚰', 'uborka-snega': '❄️',
+  'parkovka-plitka': '🅿️', 'pokos-travy': '🌿', 'vyvoz-musora': '🚛', 'otkachka-septika': '🚰', 'uborka-snega': '❄️', 'uborka-uchastka': '🧹', 'spil-derevev': '🪓',
+}
+
+// Услуги внутри раздела: сначала быстрые ходовые, потом остальные
+export const catsOfKindSorted = (kind: Kind) => [...catsOfKind(kind)].sort((a, b) => Number(!!b.hot) - Number(!!a.hot))
+
+// Что сейчас в сезоне: порядок быстрых услуг зависит от месяца
+const SEASON: Record<'winter' | 'summer' | 'offseason', string[]> = {
+  winter: ['uborka-snega', 'otkachka-septika', 'vyvoz-musora', 'spil-derevev', 'uborka-uchastka', 'pokos-travy'],
+  summer: ['pokos-travy', 'uborka-uchastka', 'spil-derevev', 'vyvoz-musora', 'otkachka-septika', 'uborka-snega'],
+  offseason: ['uborka-uchastka', 'otkachka-septika', 'vyvoz-musora', 'spil-derevev', 'uborka-snega', 'pokos-travy'],
+}
+export function hotNow(date = new Date()): Category[] {
+  const m = date.getMonth() + 1
+  const season = m >= 11 || m <= 3 ? 'winter' : m >= 5 && m <= 9 ? 'summer' : 'offseason'
+  return SEASON[season].map(getCategory).filter((c): c is Category => !!c)
+}
+export const seasonTitle = (date = new Date()) => {
+  const m = date.getMonth() + 1
+  return m >= 11 || m <= 3 ? 'Зима: снег, септик, мусор' : m >= 5 && m <= 9 ? 'Лето: покос, участок, деревья' : 'Межсезонье: уборка участка, септик к зиме'
 }

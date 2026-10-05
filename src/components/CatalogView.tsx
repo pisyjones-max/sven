@@ -24,8 +24,10 @@ export function CatalogView({ cat, city, partners }: { cat: Category; city?: Cit
         ...(city ? [{ name: city.name, path }] : []),
       ]))} />
       <p className="crumbs"><Link href="/">Главная</Link> / <Link href={`/${KIND_LABEL[cat.kind].path}`}>{KIND_LABEL[cat.kind].title}</Link></p>
-      <h1>{cat.h1}{where}</h1>
-      <p className="lead">{cat.blurb}</p>
+      <div className="cat-hero" style={{ backgroundImage: `linear-gradient(90deg,rgba(11,27,58,.82),rgba(11,27,58,.25)),url(/cat/${cat.slug}.jpg),url(/ill/${cat.slug}.svg)` }}>
+        <h1>{cat.h1}{where}</h1>
+        <p>{cat.blurb}</p>
+      </div>
       <div className="cat-grid">
         <div>
           {partners.length ? (

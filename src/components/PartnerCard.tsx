@@ -9,7 +9,7 @@ export function PartnerCard({ p }: { p: Partner }) {
   const main = getCategory(p.cats[0])
   return (
     <Link href={`/p/${p.slug}`} className="pcard">
-      <Ph seed={p.slug} icon={(main && ICON[main.slug]) || '🏠'} className="pcard-ph" />
+      <Ph seed={p.slug} icon={(main && ICON[main.slug]) || '🏠'} cat={main?.slug} className="pcard-ph" />
       <div className="pcard-body">
         <b className="pcard-name">{p.name}{p.demo && <em className="badge">тест</em>}</b>
         <span className="muted small">{getCity(p.city)?.name}{p.since ? ` · с ${p.since} года` : ''}</span>

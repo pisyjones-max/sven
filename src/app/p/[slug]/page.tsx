@@ -44,7 +44,7 @@ export default async function PartnerPage({ params }: P) {
     <>
       <script {...jsonLd({ '@context': 'https://schema.org', '@type': 'LocalBusiness', name: p.name, url: `${SITE_URL}/p/${p.slug}`, areaServed: city?.name, description: p.desc })} />
       {p.demo && <div className="demo-note">Тестовая компания: название, цены и описание вымышленные, страница нужна для проверки вида.</div>}
-      <Ph seed={p.slug} icon={icon} label={main?.title} className="hero-ph" />
+      <Ph seed={p.slug} icon={icon} cat={main?.slug} label={main?.title} className="hero-ph" />
       <div className="pp-grid">
         <div>
           <h1>{p.name}</h1>
@@ -78,7 +78,7 @@ export default async function PartnerPage({ params }: P) {
               <div className="items">
                 {p.items.map((it, i) => (
                   <div key={it.title} className="card item">
-                    {isBuilder && <Ph seed={`${p.slug}-${i}`} icon={icon} label="Фото" className="item-ph" />}
+                    {isBuilder && <Ph seed={`${p.slug}-${i}`} icon={icon} cat={main?.slug} variant={i} className="item-ph" />}
                     <b>{it.title}</b>
                     <span className="muted small">{it.meta}</span>
                     <span className="price">{it.price}</span>
@@ -103,7 +103,7 @@ export default async function PartnerPage({ params }: P) {
 
           <h2>Фото работ</h2>
           <div className="gallery">
-            {[0, 1, 2].map(i => <Ph key={i} seed={`${p.slug}-g${i}`} icon={icon} label="Фото" />)}
+            {[0, 1, 2].map(i => <Ph key={i} seed={`${p.slug}-g${i}`} icon={icon} cat={main?.slug} variant={i} />)}
           </div>
         </div>
         <aside>
