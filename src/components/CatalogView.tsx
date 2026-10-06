@@ -3,7 +3,7 @@ import { Category, City, CITIES, KIND_LABEL, catHref } from '@/lib/catalog'
 import { Partner } from '@/lib/store'
 import { PartnerCard } from './PartnerCard'
 import { AdBanner } from './AdBanner'
-import { LeadForm } from './LeadForm'
+import { OrderWizard } from './OrderWizard'
 import { jsonLd, faqSchema, breadcrumbs } from '@/lib/schema'
 
 export function CatalogView({ cat, city, partners }: { cat: Category; city?: City; partners: Partner[] }) {
@@ -52,7 +52,7 @@ export function CatalogView({ cat, city, partners }: { cat: Category; city?: Cit
           )}
         </div>
         <aside className="cat-aside">
-          <LeadForm cat={cat.slug} city={city?.slug} title="Получить предложения" sub="Одна заявка, ответы от нескольких компаний в чате." />
+          <OrderWizard cat={cat.slug} city={city?.slug} title="Получить предложения" />
           <AdBanner slot="side" seed={`${path}-side`} />
         </aside>
       </div>

@@ -6,7 +6,7 @@ export async function buildOrders(convs: Conv[]) {
   const orders = []
   for (const c of convs) {
     const p = await getPartner(c.partnerId)
-    if (!p) continue
+    if (!p || p.system) continue
     orders.push({
       id: c.id, slug: p.slug, partnerName: p.name, cat: getCategory(p.cats[0])?.title ?? '',
       createdAt: c.createdAt, accepted: c.accepted, last: c.msgs[c.msgs.length - 1]?.text.slice(0, 120) ?? '',

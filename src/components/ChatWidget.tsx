@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { formatPhone } from '@/lib/phone'
 import { addOrder } from '@/lib/orders-client'
 import { TgNotify } from './TgNotify'
+import { QUICK_ASK_BUILDERS, QUICK_ASK_SERVICES } from '@/lib/questions'
 
 interface Msg { from: 'client' | 'partner'; text: string; at: number }
 
-export function ChatWidget({ slug, partnerName }: { slug: string; partnerName: string }) {
+export function ChatWidget({ slug, partnerName, builder = false, asks: asksProp }: { slug: string; partnerName: string; builder?: boolean; asks?: string[] }) {
   const key = `doma-chat:${slug}`
   const [convId, setConvId] = useState<string | null>(null)
   const [msgs, setMsgs] = useState<Msg[]>([])
@@ -31,6 +32,12 @@ export function ChatWidget({ slug, partnerName }: { slug: string; partnerName: s
     }, 0)
     return () => clearTimeout(t)
   }, [key, slug])
+
+  useEffect(() => {
+    const on = () => { try { const id = localStorage.getItem(key); if (id) setConvId(id) } catch { /* ok */ } }
+    window.addEventListener('doma-chat-started', on)
+    return () => window.removeEventListener('doma-chat-started', on)
+  }, [key])
 
   useEffect(() => {
     if (!convId) return
@@ -80,6 +87,15 @@ export function ChatWidget({ slug, partnerName }: { slug: string; partnerName: s
     await fetch('/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: convId, text: t }) }).catch(() => {})
   }
 
+  async function quick(t: string) {
+    if (convId) {
+      setMsgs(m => [...m, { from: 'client', text: t, at: Date.now() }])
+      await fetch('/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: convId, text: t }) }).catch(() => {})
+    } else setText(x => (x ? `${x} ${t}` : t))
+  }
+  const asks = asksProp ?? (builder ? QUICK_ASK_BUILDERS : QUICK_ASK_SERVICES)
+  const chips = <div className="asks">{asks.map(a => <button type="button" key={a} className="chip" onClick={() => quick(a)}>{a}</button>)}</div>
+
   if (!convId) {
     return (
       <form className="card chat" onSubmit={start}>
@@ -87,6 +103,7 @@ export function ChatWidget({ slug, partnerName }: { slug: string; partnerName: s
         <input className="hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden />
         <input placeholder="Ваше имя" value={name} onChange={e => setName(e.target.value)} required />
         <input placeholder="Телефон" inputMode="tel" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} required />
+        {chips}
         <textarea placeholder="Что нужно? Адрес, размеры, сроки" rows={3} value={text} onChange={e => setText(e.target.value)} required />
         <label className="check"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
           <span>Согласен на обработку данных и хранение переписки на платформе. <Link href="/privacy">Политика</Link></span></label>
@@ -103,6 +120,7 @@ export function ChatWidget({ slug, partnerName }: { slug: string; partnerName: s
         {msgs.map((m, i) => <div key={i} className={`msg ${m.from}`}>{m.text}</div>)}
         <div ref={endRef} />
       </div>
+      {chips}
       <form className="row" onSubmit={send}>
         <input placeholder="Сообщение" value={text} onChange={e => setText(e.target.value)} />
         <button className="btn">→</button>

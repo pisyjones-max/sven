@@ -3,6 +3,7 @@ import { tgSend, tgAdmin } from './tg'
 import { SITE_URL } from './site'
 import { loyaltyFor } from './loyalty-server'
 import { getAccount } from './account'
+import { maxAdapter, rememberClientMsg, tgAdapter } from './channels'
 
 // Клиент написал → уведомить партнёра (Telegram) и админа (копия, без масок)
 export async function notifyClientMessage(c: Conv, text: string, first: boolean) {
@@ -17,7 +18,7 @@ export async function notifyClientMessage(c: Conv, text: string, first: boolean)
     const id = await tgSend(p.tgChatId, `${head}\n\n${lastMasked}\n\n↩️ Нажмите «Ответить» на это сообщение, чтобы написать клиенту. Контакт откроется после вашего первого ответа.`)
     if (id) await rememberTgMsg(p.tgChatId, id, c.id)
   }
-  await tgAdmin(`👁 [${p.name}] ${first ? 'НОВАЯ ЗАЯВКА' : 'клиент'}: ${c.clientName} ${c.clientPhone}\n${text}\n${SITE_URL}/p/${p.slug}`)
+  if (!p.system) await tgAdmin(`👁 [${p.name}] ${first ? 'НОВАЯ ЗАЯВКА' : 'клиент'}: ${c.clientName} ${c.clientPhone}\n${text}\n${SITE_URL}/p/${p.slug}`)
 }
 
 // Партнёр ответил (Telegram или кабинет). Первый ответ = принятый лид.
@@ -37,12 +38,21 @@ export async function partnerReply(c: Conv, p: Partner, text: string) {
     }
   }
   await notifyClientReply(c, p, text)
-  await tgAdmin(`👁 [${p.name}] ответ → ${c.clientName}${firstAccept ? ' (ЛИД ПРИНЯТ)' : ''}\n${text}`)
+  if (!p.system) await tgAdmin(`👁 [${p.name}] ответ → ${c.clientName}${firstAccept ? ' (ЛИД ПРИНЯТ)' : ''}\n${text}`)
 }
 
-// Компания ответила → сообщить клиенту и всем, кто подключил Telegram к его кабинету
+// Компания ответила → сообщить клиенту и всем, кто подключил Telegram или MAX к его кабинету
 async function notifyClientReply(c: Conv, p: Partner, text: string) {
   if (!c.acctId) return
   const a = await getAccount(c.acctId)
-  for (const chat of a?.tgChatIds ?? []) await tgSend(chat, `💬 ${p.name}:\n${text}\n\nОтветить: ${SITE_URL}/p/${p.slug}`)
+  const body = `💬 ${p.name}:\n${text}\n\nЧтобы ответить, нажмите «Ответить» на это сообщение. Чат также на сайте: ${SITE_URL}/p/${p.slug}`
+  for (const chat of a?.tgChatIds ?? []) { const mid = await tgAdapter.send(chat, body); if (mid) await rememberClientMsg('tg', chat, mid, c.id) }
+  for (const chat of a?.maxChatIds ?? []) { const mid = await maxAdapter.send(chat, body); if (mid) await rememberClientMsg('max', chat, mid, c.id) }
+}
+
+// Клиент написал (на сайте или в мессенджере): запись в общий чат и уведомление компании
+export async function clientSays(c: Conv, text: string) {
+  c.msgs.push({ from: 'client', text, at: Date.now() })
+  await saveConv(c)
+  await notifyClientMessage(c, text, false)
 }

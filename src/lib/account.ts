@@ -10,7 +10,7 @@ export const COOKIE = 'doma_sid'
 export const INVITE_TTL = 3 * 24 * 3600 * 1000
 export const INVITE_MAX_USES = 5
 
-export interface Account { id: string; createdAt: number; convIds: string[]; phone?: string; tgChatIds?: string[] }
+export interface Account { id: string; createdAt: number; convIds: string[]; phone?: string; tgChatIds?: string[]; maxChatIds?: string[] }
 export interface Session { id: string; token: string; acctId: string; role: 'owner' | 'guest'; label: string; at: number; lastSeen: number; revoked?: boolean }
 export interface Invite { token: string; acctId: string; exp: number; uses: number; max: number }
 
@@ -134,11 +134,26 @@ export async function mergeInto(targetId: string, fromId: string) {
   if (targetId === fromId) return
   for (const c of await accountConvs(fromId)) await attachConv(targetId, c.id, true)
   const from = await getAccount(fromId)
-  const to = await getAccount(targetId)
-  if (from && to && from.tgChatIds?.length) {
-    to.tgChatIds = [...new Set([...(to.tgChatIds ?? []), ...from.tgChatIds])]
-    await kvSet(`acct:${targetId}`, to)
-  }
+  if (!from) return
+  for (const chat of from.tgChatIds ?? []) await bindChat('tg', targetId, chat)
+  for (const chat of from.maxChatIds ?? []) await bindChat('max', targetId, chat)
+}
+
+export type Ch = 'tg' | 'max'
+
+// Чат клиента в мессенджере привязан к кабинету: ответы компаний приходят туда
+export async function bindChat(ch: Ch, acctId: string, chatId: string) {
+  const a = await getAccount(acctId)
+  if (!a) return
+  const field = ch === 'tg' ? 'tgChatIds' : 'maxChatIds'
+  a[field] = [...new Set([...(a[field] ?? []), chatId])]
+  await kvSet(`acct:${acctId}`, a)
+  await kvSet(`chacct:${ch}:${chatId}`, acctId)
+}
+
+export async function chatAccount(ch: Ch, chatId: string): Promise<string | null> {
+  const id = await kvGet<string>(`chacct:${ch}:${chatId}`)
+  return id && (await getAccount(id)) ? id : null
 }
 
 export async function createTgBind(acctId: string): Promise<string> {
@@ -147,14 +162,12 @@ export async function createTgBind(acctId: string): Promise<string> {
   return token
 }
 
-export async function bindTelegram(token: string, chatId: string): Promise<boolean> {
+export async function bindFromToken(ch: Ch, token: string, chatId: string): Promise<boolean> {
   const b = await kvGet<{ acctId: string; exp: number }>(`cbind:${token}`)
-  if (!b || b.exp < Date.now()) return false
-  const a = await getAccount(b.acctId)
-  if (!a) return false
-  a.tgChatIds = [...new Set([...(a.tgChatIds ?? []), chatId])]
-  await kvSet(`acct:${b.acctId}`, a)
+  if (!b || b.exp < Date.now() || !(await getAccount(b.acctId))) return false
+  await bindChat(ch, b.acctId, chatId)
   return true
 }
+export const bindTelegram = (token: string, chatId: string) => bindFromToken('tg', token, chatId)
 
 export const maskPhone = (p: string) => `+${p[0]} ••• ••• ${p.slice(-4, -2)}-${p.slice(-2)}`

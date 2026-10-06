@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto'
 import { kvGet, kvSet, kvScanKeys } from './kv'
 import { maskContacts } from './mask'
 import { DEMO_PARTNERS } from './demo'
+import { ADMIN_CHAT } from './tg'
 import type { Tier } from './loyalty'
 
 export interface Partner {
@@ -32,6 +33,7 @@ export interface Partner {
   verified?: boolean // проверена платформой (ставит админ)
   respSum?: number // сумма времени до первого ответа, мс
   respCount?: number
+  system?: boolean // служебный «Диспетчер»: общий чат платформы, не показывается в каталоге
 }
 
 export interface Msg { from: 'client' | 'partner'; text: string; at: number }
@@ -92,9 +94,15 @@ export const savePartner = (p: Partner) => kvSet(`partner:${p.id}`, p)
 // Тестовые компании: только при SEED_DEMO=1. Обновляются при каждом старте, счётчик лидов сохраняется.
 type DemoGlobal = typeof globalThis & { __demoSeed?: Promise<void> }
 function ensureDemo(): Promise<void> {
-  if (process.env.SEED_DEMO !== '1') return Promise.resolve()
   const g = globalThis as DemoGlobal
   return (g.__demoSeed ??= (async () => {
+    // Диспетчер: общий чат платформы. Сообщения идут админу в Telegram, ответ из Telegram виден клиенту на сайте.
+    const sys = await kvGet<Partner>('partner:dispatch')
+    const disp: Partner = { ...(sys ?? { id: 'dispatch', slug: 'dispatcher', token: rid(16), name: 'Диспетчер', phone: '', cats: [], city: 'podmoskove', leads: 0, createdAt: 1 }), system: true, tgChatId: ADMIN_CHAT || undefined }
+    await kvSet('partner:dispatch', disp)
+    await kvSet('pslug:dispatcher', 'dispatch')
+    await kvSet(`ptok:${disp.token}`, 'dispatch')
+    if (process.env.SEED_DEMO !== '1') return
     for (const d of DEMO_PARTNERS) {
       const old = await kvGet<Partner>(`partner:${d.id}`)
       await kvSet(`partner:${d.id}`, { ...d, leads: old?.leads ?? 0, tgChatId: old?.tgChatId, rSum: old?.rSum, rCount: old?.rCount, loyalty: old?.loyalty ?? d.loyalty, verified: old?.verified, respSum: old?.respSum, respCount: old?.respCount })
@@ -256,4 +264,8 @@ export async function complainConv(convId: string, partnerId: string, reason: st
     if (p) { p.leads = Math.max(0, p.leads - 1); await savePartner(p) } // заявка не засчитывается
   }
   return true
+}
+
+export async function listPublicPartners(): Promise<Partner[]> {
+  return (await listPartners()).filter(p => !p.system)
 }

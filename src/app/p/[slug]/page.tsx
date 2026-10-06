@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { getPartnerBySlug, avgRating, isLive, listReviews } from '@/lib/store'
 import { getCategory, getCity, catHref, ICON } from '@/lib/catalog'
 import { ChatWidget } from '@/components/ChatWidget'
+import { OrderWizard } from '@/components/OrderWizard'
 import { Ph } from '@/components/Ph'
 import { AdBanner } from '@/components/AdBanner'
 import { Stars } from '@/components/Stars'
@@ -44,7 +45,7 @@ export default async function PartnerPage({ params }: P) {
     <>
       <script {...jsonLd({ '@context': 'https://schema.org', '@type': 'LocalBusiness', name: p.name, url: `${SITE_URL}/p/${p.slug}`, areaServed: city?.name, description: p.desc })} />
       {p.demo && <div className="demo-note">Тестовая компания: название, цены и описание вымышленные, страница нужна для проверки вида.</div>}
-      <Ph seed={p.slug} icon={icon} cat={main?.slug} label={main?.title} className="hero-ph" />
+      <Ph seed={p.slug} icon={icon} cat={main?.slug} label={main?.title} className="hero-ph" hero />
       <div className="pp-grid">
         <div>
           <h1>{p.name}</h1>
@@ -107,7 +108,7 @@ export default async function PartnerPage({ params }: P) {
           </div>
         </div>
         <aside>
-          {live ? <ChatWidget slug={p.slug} partnerName={p.name} /> : (
+          {live ? <><OrderWizard slug={p.slug} cats={p.cats} cat={p.cats.length === 1 ? p.cats[0] : undefined} title="Быстрый заказ" /><ChatWidget slug={p.slug} partnerName={p.name} builder={isBuilder} /></> : (
             <div className="card contact">
               <h3>Контакты</h3>
               {p.phone && <a className="btn big" href={`tel:+${p.phone}`}>Позвонить {formatPhone('+' + p.phone)}</a>}

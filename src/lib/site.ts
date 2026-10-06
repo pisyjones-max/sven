@@ -6,3 +6,4 @@ export const SITE_URL = (
 ).replace(/\/$/, '')
 
 export const TG_BOT = process.env.NEXT_PUBLIC_TG_BOT ?? ''
+export const MAX_BOT = process.env.NEXT_PUBLIC_MAX_BOT ?? ''

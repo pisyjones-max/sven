@@ -7,9 +7,16 @@ function hue(seed: string): number {
 
 const POS = ['20% 40%', '55% 75%', '85% 30%']
 
-export function Ph({ seed, icon, label, className = '', cat, variant }: { seed: string; icon: string; label?: string; className?: string; cat?: string; variant?: number }) {
+export function Ph({ seed, icon, label, className = '', cat, variant, hero = false }: { seed: string; icon: string; label?: string; className?: string; cat?: string; variant?: number; hero?: boolean }) {
   if (cat) {
     const style: React.CSSProperties = { backgroundImage: `url(/cat/${cat}.jpg), url(/ill/${cat}.svg)` }
+    if (hero) {
+      // Широкий баннер: иллюстрация справа на фоне цвета темы, настоящее фото (если есть) занимает всё поле
+      style.backgroundImage = `url(/cat/${cat}.jpg), url(/ill/${cat}.svg), linear-gradient(135deg,var(--hero-a),var(--hero-c))`
+      style.backgroundSize = 'cover, auto 100%, cover'
+      style.backgroundPosition = 'center, right 6% center, center'
+      style.backgroundRepeat = 'no-repeat'
+    }
     if (variant !== undefined) { style.backgroundPosition = POS[variant % 3]; style.backgroundSize = '230%' }
     return (
       <div className={`ph ph-img ${className}`} style={style}>

@@ -38,6 +38,11 @@ TG_WEBHOOK_SECRET=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head
 TG_TOKEN=
 # Ключ SMS.ru: вход по номеру и подтверждение телефона компаний
 SMS_RU_API_ID=
+# MAX: токен бота и его имя (без @)
+MAX_BOT_TOKEN=
+NEXT_PUBLIC_MAX_BOT=
+# Палитра: emerald, graphite, indigo, ocean
+NEXT_PUBLIC_THEME=emerald
 TG_ADMIN_CHAT_ID=
 NEXT_PUBLIC_TG_BOT=
 # Если Telegram с сервера недоступен, укажи Cloudflare Worker-прокси:

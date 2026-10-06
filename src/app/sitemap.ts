@@ -1,12 +1,12 @@
 import type { MetadataRoute } from 'next'
 import { SITE_URL } from '@/lib/site'
 import { CATEGORIES, CITIES, KIND_LABEL, catHref } from '@/lib/catalog'
-import { listPartners } from '@/lib/store'
+import { listPublicPartners } from '@/lib/store'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
   const u = (path: string, priority: number) => ({ url: SITE_URL + path, lastModified: now, priority })
-  const partners = await listPartners().catch(() => [])
+  const partners = await listPublicPartners().catch(() => [])
   return [
     u('/', 1),
     u('/partner/register', 0.6),

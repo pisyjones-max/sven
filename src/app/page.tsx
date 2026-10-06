@@ -1,17 +1,17 @@
 import Link from 'next/link'
 import { CATEGORIES, CITIES, KIND_LABEL, catHref, catsOfKindSorted, hotNow, seasonTitle } from '@/lib/catalog'
-import { listPartners } from '@/lib/store'
+import { listPublicPartners } from '@/lib/store'
 import { catStats } from '@/lib/catstats'
 import { SearchBox } from '@/components/SearchBox'
 import { AdBanner } from '@/components/AdBanner'
-import { LeadForm } from '@/components/LeadForm'
+import { OrderWizard } from '@/components/OrderWizard'
 import { CatCard } from '@/components/CatCard'
 import { Scroller } from '@/components/Scroller'
 
 export const revalidate = 60
 
 export default async function Home() {
-  const stats = catStats(await listPartners().catch(() => []))
+  const stats = catStats(await listPublicPartners().catch(() => []))
   const hot = hotNow()
   const hotSlugs = new Set(hot.map(c => c.slug))
   const others = catsOfKindSorted('uslugi').filter(c => !hotSlugs.has(c.slug))
@@ -58,7 +58,7 @@ export default async function Home() {
             <li>Ничего не платите за подбор</li>
           </ul>
         </div>
-        <LeadForm />
+        <OrderWizard />
       </section>
 
       {others.length > 0 && (

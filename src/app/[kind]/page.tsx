@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { KIND_LABEL, catsOfKindSorted, Kind } from '@/lib/catalog'
-import { listPartners } from '@/lib/store'
+import { listPublicPartners } from '@/lib/store'
 import { catStats } from '@/lib/catstats'
 import { CatCard } from '@/components/CatCard'
 
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: P): Promise<Metadata> {
 export default async function KindPage({ params }: P) {
   const k = kindOf((await params).kind)
   if (!k) notFound()
-  const stats = catStats(await listPartners().catch(() => []))
+  const stats = catStats(await listPublicPartners().catch(() => []))
   return (
     <>
       <h1>{KIND_LABEL[k].title} в Подмосковье</h1>

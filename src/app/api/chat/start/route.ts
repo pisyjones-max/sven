@@ -3,6 +3,8 @@ import { normalizePhone, isPlausiblePhone } from '@/lib/phone'
 import { createConv, getPartnerBySlug, isLive } from '@/lib/store'
 import { notifyClientMessage } from '@/lib/chat'
 import { attachConv, ensureAccount } from '@/lib/account'
+import { getCategory } from '@/lib/catalog'
+import { composeRequest } from '@/lib/questions'
 
 export async function POST(req: NextRequest) {
   let b: Record<string, unknown>
@@ -15,7 +17,9 @@ export async function POST(req: NextRequest) {
   if (!phone || !isPlausiblePhone(phoneRaw)) return NextResponse.json({ ok: false, error: 'bad_phone' }, { status: 400 })
   if (b.consent !== true) return NextResponse.json({ ok: false, error: 'no_consent' }, { status: 400 })
   const name = String(b.name ?? '').trim().slice(0, 80)
-  const text = String(b.text ?? '').trim().slice(0, 1500)
+  let text = String(b.text ?? b.note ?? '').trim().slice(0, 1500)
+  const cat = getCategory(String(b.cat ?? ''))
+  if (cat && b.answers) text = composeRequest(cat.title, undefined, cat.slug, b.answers as Record<string, unknown>, String(b.note ?? '').trim().slice(0, 1200))
   if (!name || !text) return NextResponse.json({ ok: false, error: 'empty' }, { status: 400 })
   const acct = await ensureAccount(req.headers.get('user-agent') ?? '')
   const c = await createConv(p.id, name, phone, text, acct.acctId)
