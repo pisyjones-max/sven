@@ -63,7 +63,10 @@ export async function POST(req: NextRequest) {
       const convId = replyTo ? await lookupTgMsg(chatId, replyTo) : null
       const c = convId ? await getConv(convId) : null
       const partner = c ? mine.find(x => x.id === c.partnerId) : null
-      if (c && partner) { await partnerReply(c, partner, text); return NextResponse.json({ ok: true }) }
+      if (c && partner) {
+        if ((await partnerReply(c, partner, text)) === 'no_balance') await tgSend(chatId, `Недостаточно средств на балансе, чтобы принять заявку. Пополните баланс: ${SITE_URL}/cabinet/${partner.token}`)
+        return NextResponse.json({ ok: true })
+      }
       if (payload === null && !replyTo && !text.startsWith('/')) {
         await tgSend(chatId, 'Чтобы ответить клиенту, нажмите «Ответить» на сообщение с его заявкой.')
         return NextResponse.json({ ok: true })

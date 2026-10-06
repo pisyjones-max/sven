@@ -5,6 +5,7 @@ import { CATEGORIES, CITIES, KIND_LABEL, Kind } from '@/lib/catalog'
 import { formatPhone } from '@/lib/phone'
 import { addOrder } from '@/lib/orders-client'
 import { TgNotify } from './TgNotify'
+import { useCaptcha } from './Captcha'
 
 interface Sent { slug: string; name: string; convId: string }
 
@@ -18,6 +19,7 @@ export function LeadForm({ cat, city, title = 'Подберём исполнит
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<{ sent: Sent[]; waiting: boolean } | null>(null)
+  const cap = useCaptcha()
 
   async function submit(e: React.SyntheticEvent) {
     e.preventDefault()
@@ -26,10 +28,10 @@ export function LeadForm({ cat, city, title = 'Подберём исполнит
     try {
       const r = await fetch('/api/lead', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cat: c, city: ct, name, phone, text, consent, website: '' }),
+        body: JSON.stringify({ cat: c, city: ct, name, phone, text, consent, captcha: cap.token, website: '' }),
       })
       const j = await r.json()
-      if (!j.ok) setErr(j.error === 'bad_phone' ? 'Проверьте номер телефона' : j.error === 'no_consent' ? 'Нужно согласие на обработку данных' : j.error === 'no_cat' ? 'Выберите, что нужно' : 'Не удалось отправить, попробуйте ещё раз')
+      if (!j.ok) { cap.reset(); setErr(j.error === 'captcha' ? 'Подтвердите, что вы не робот' : j.error === 'rate' ? 'Слишком много попыток, попробуйте позже' : j.error === 'bad_phone' ? 'Проверьте номер телефона' : j.error === 'no_consent' ? 'Нужно согласие на обработку данных' : j.error === 'no_cat' ? 'Выберите, что нужно' : 'Не удалось отправить, попробуйте ещё раз') }
       else {
         for (const s of j.sent as Sent[]) { try { localStorage.setItem(`doma-chat:${s.slug}`, s.convId) } catch { /* ok */ } addOrder({ id: s.convId, slug: s.slug }) }
         setDone({ sent: j.sent, waiting: j.sent.length === 0 })
@@ -79,8 +81,9 @@ export function LeadForm({ cat, city, title = 'Подберём исполнит
       <textarea placeholder="Коротко о задаче (необязательно)" rows={2} value={text} onChange={e => setText(e.target.value)} />
       <label className="check"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
         <span>Согласен на обработку данных и хранение переписки. <Link href="/privacy">Политика</Link></span></label>
+      {cap.widget}
       {err && <p className="err">{err}</p>}
-      <button className="btn big" disabled={busy}>{busy ? 'Отправляем…' : 'Получить предложения'}</button>
+      <button className="btn big" disabled={busy || (cap.enabled && !cap.token)}>{busy ? 'Отправляем…' : 'Получить предложения'}</button>
     </form>
   )
 }

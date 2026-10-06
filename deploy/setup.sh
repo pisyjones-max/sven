@@ -44,6 +44,15 @@ NEXT_PUBLIC_MAX_BOT=
 # Палитра: emerald, graphite, indigo, ocean
 NEXT_PUBLIC_THEME=emerald
 TG_ADMIN_CHAT_ID=
+# Яндекс SmartCaptcha: ключ клиента (публичный) и ключ сервера. Пусто = капча выключена
+NEXT_PUBLIC_SMARTCAPTCHA_SITEKEY=
+SMARTCAPTCHA_SERVER_KEY=
+# Платные лиды: 1 = списывать за принятую заявку; стартовый бонус, ₽; контакт для пополнения
+# BILLING=1
+# BILLING_WELCOME=1000
+# NEXT_PUBLIC_SUPPORT_CONTACT=@ваш_telegram
+# 1 = присылать ночную копию базы админу в Telegram
+# BACKUP_TG=1
 NEXT_PUBLIC_TG_BOT=
 # Если Telegram с сервера недоступен, укажи Cloudflare Worker-прокси:
 # TG_API_BASE=https://shy-limit-0b22.pisyjones.workers.dev

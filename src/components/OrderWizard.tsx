@@ -1,4 +1,5 @@
 'use client'
+import { useCaptcha } from './Captcha'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { CATEGORIES, CITIES, ICON, getCategory } from '@/lib/catalog'
@@ -23,6 +24,7 @@ export function OrderWizard({ cat: catProp, city: cityProp, slug, cats, title = 
   const [consent, setConsent] = useState(false)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const cap = useCaptcha()
   const [done, setDone] = useState<{ sent: Sent[]; chat?: boolean } | null>(null)
 
   useEffect(() => {
@@ -53,11 +55,11 @@ export function OrderWizard({ cat: catProp, city: cityProp, slug, cats, title = 
     setErr(''); setBusy(true)
     try {
       const body = slug
-        ? { slug, cat, answers, note, name, phone, consent, website: '' }
-        : { cat, city, answers, note, name, phone, consent, website: '' }
+        ? { slug, cat, answers, note, name, phone, consent, captcha: cap.token, website: '' }
+        : { cat, city, answers, note, name, phone, consent, captcha: cap.token, website: '' }
       const r = await fetch(slug ? '/api/chat/start' : '/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const j = await r.json()
-      if (!j.ok) setErr(j.error === 'bad_phone' ? 'Проверьте номер телефона' : j.error === 'no_consent' ? 'Нужно согласие на обработку данных' : 'Не удалось отправить, попробуйте ещё раз')
+      if (!j.ok) { cap.reset(); setErr(j.error === 'captcha' ? 'Подтвердите, что вы не робот' : j.error === 'rate' ? 'Слишком много попыток, попробуйте позже' : j.error === 'bad_phone' ? 'Проверьте номер телефона' : j.error === 'no_consent' ? 'Нужно согласие на обработку данных' : 'Не удалось отправить, попробуйте ещё раз') }
       else {
         try { localStorage.setItem(CONTACT_KEY, JSON.stringify({ name, phone })) } catch { /* ok */ }
         if (slug) {
@@ -133,8 +135,9 @@ export function OrderWizard({ cat: catProp, city: cityProp, slug, cats, title = 
           <textarea placeholder="Комментарий, адрес (необязательно)" rows={2} value={note} onChange={e => setNote(e.target.value)} />
           <label className="check"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
             <span>Согласен на обработку данных и хранение переписки. <Link href="/privacy">Политика</Link></span></label>
+          {cap.widget}
           {err && <p className="err">{err}</p>}
-          <button className="btn big" disabled={busy}>{busy ? 'Отправляем…' : slug ? 'Отправить компании' : 'Получить предложения'}</button>
+          <button className="btn big" disabled={busy || (cap.enabled && !cap.token)}>{busy ? 'Отправляем…' : slug ? 'Отправить компании' : 'Получить предложения'}</button>
         </>
       )}
 

@@ -4,6 +4,7 @@ import { SITE_URL } from './site'
 import { loyaltyFor } from './loyalty-server'
 import { getAccount } from './account'
 import { maxAdapter, rememberClientMsg, tgAdapter } from './channels'
+import { balanceOf, billingOn, canPay, chargeLead, leadPrice } from './billing'
 
 // Клиент написал → уведомить партнёра (Telegram) и админа (копия, без масок)
 export async function notifyClientMessage(c: Conv, text: string, first: boolean) {
@@ -22,10 +23,13 @@ export async function notifyClientMessage(c: Conv, text: string, first: boolean)
 }
 
 // Партнёр ответил (Telegram или кабинет). Первый ответ = принятый лид.
-export async function partnerReply(c: Conv, p: Partner, text: string) {
-  c.msgs.push({ from: 'partner', text, at: Date.now() })
+export async function partnerReply(c: Conv, p: Partner, text: string): Promise<'ok' | 'no_balance'> {
   const firstAccept = !c.accepted
+  // Платные лиды: без денег на балансе первую заявку принять нельзя (на жалобу не списываем)
+  if (firstAccept && !c.complaint && !canPay(p, leadPrice(c, p))) return 'no_balance'
+  c.msgs.push({ from: 'partner', text, at: Date.now() })
   c.accepted = true
+  const price = firstAccept ? await chargeLead(p, c) : 0
   await saveConv(c)
   if (firstAccept) {
     p.respSum = (p.respSum ?? 0) + (Date.now() - c.msgs[0].at)
@@ -33,12 +37,14 @@ export async function partnerReply(c: Conv, p: Partner, text: string) {
     p.leads += 1
     await savePartner(p)
     if (p.tgChatId) {
-      const id = await tgSend(p.tgChatId, `✅ Лид принят. Контакт клиента: ${c.clientName}, +${c.clientPhone}\nПереписка продолжается в этом чате.`)
+      const pay = billingOn() && price > 0 ? `\nСписано ${price} ₽, баланс ${balanceOf(p)} ₽.${balanceOf(p) < price * 2 ? ' Баланс заканчивается, пополните его.' : ''}` : ''
+      const id = await tgSend(p.tgChatId, `✅ Лид принят. Контакт клиента: ${c.clientName}, +${c.clientPhone}\nПереписка продолжается в этом чате.${pay}`)
       if (id) await rememberTgMsg(p.tgChatId, id, c.id)
     }
   }
   await notifyClientReply(c, p, text)
   if (!p.system) await tgAdmin(`👁 [${p.name}] ответ → ${c.clientName}${firstAccept ? ' (ЛИД ПРИНЯТ)' : ''}\n${text}`)
+  return 'ok'
 }
 
 // Компания ответила → сообщить клиенту и всем, кто подключил Telegram или MAX к его кабинету

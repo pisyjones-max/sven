@@ -4,12 +4,17 @@ import { getCategory, getCity } from '@/lib/catalog'
 import { ensureAccount } from '@/lib/account'
 import { composeRequest } from '@/lib/questions'
 import { dispatchLead } from '@/lib/lead'
+import { verifyCaptcha } from '@/lib/captcha'
+import { clientIp, rateLimit } from '@/lib/ratelimit'
 
 // Заявка «подберите исполнителя»: ответы на вопросы или свободный текст
 export async function POST(req: NextRequest) {
   let b: Record<string, unknown>
   try { b = await req.json() } catch { return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 }) }
   if (b.website) return NextResponse.json({ ok: true, sent: [] }) // honeypot
+  const ip = clientIp(req)
+  if (!rateLimit(`lead:${ip}`, 6, 3600_000)) return NextResponse.json({ ok: false, error: 'rate' }, { status: 429 })
+  if (!(await verifyCaptcha(b.captcha, ip))) return NextResponse.json({ ok: false, error: 'captcha' }, { status: 400 })
 
   const cat = getCategory(String(b.cat ?? ''))
   if (!cat) return NextResponse.json({ ok: false, error: 'no_cat' }, { status: 400 })

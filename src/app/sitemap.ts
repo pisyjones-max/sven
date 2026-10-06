@@ -10,6 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     u('/', 1),
     u('/partner/register', 0.6),
+    u('/master', 0.7),
     ...Object.values(KIND_LABEL).map(k => u(`/${k.path}`, 0.9)),
     ...CATEGORIES.map(c => u(catHref(c), 0.8)),
     ...CATEGORIES.flatMap(c => CITIES.map(ct => u(catHref(c, ct.slug), 0.6))),

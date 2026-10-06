@@ -38,6 +38,7 @@ export function Footer() {
           </div>
           <div>
             <b>Компаниям</b>
+            <Link href="/master">Мастерам: получать заявки</Link>
             <Link href="/partner/register">Разместить компанию</Link>
             <Link href="/login">Войти по номеру</Link>
             <Link href="/privacy">Политика данных</Link>

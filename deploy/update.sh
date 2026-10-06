@@ -12,4 +12,5 @@ NODE_OPTIONS=--max-old-space-size=1200 npm run build
 if pm2 describe sven >/dev/null 2>&1; then pm2 reload sven --update-env
 else pm2 start node_modules/next/dist/bin/next --name sven -- start -p $PORT; fi
 pm2 save
+bash "$APP_DIR/deploy/cron.sh" || true
 sleep 3; curl -s -o /dev/null -w "HTTP %{http_code}\n" "http://127.0.0.1:$PORT/"

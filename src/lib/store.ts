@@ -34,6 +34,8 @@ export interface Partner {
   respSum?: number // сумма времени до первого ответа, мс
   respCount?: number
   system?: boolean // служебный «Диспетчер»: общий чат платформы, не показывается в каталоге
+  balance?: number // баланс для платных лидов, ₽ (пусто = ещё не инициализирован)
+  src?: string // откуда пришла регистрация (плакат, мастер, партнёр)
 }
 
 export interface Msg { from: 'client' | 'partner'; text: string; at: number }
@@ -51,6 +53,11 @@ export interface Conv {
   acctId?: string // кабинет клиента, которому принадлежит заказ
   done?: { at: number; amount?: number }[] // выполненные работы, подтверждает компания
   complaint?: { reason: string; at: number } // компания пожаловалась: заявка не по теме или спам
+  cat?: string // раздел заявки (по нему считается цена лида)
+  reqId?: string // общий номер заявки клиента, которая ушла нескольким компаниям
+  remindedAt?: number // компании напомнили в Telegram, что заявка без ответа
+  charged?: number // списано за принятую заявку, ₽
+  refunded?: boolean // списанное возвращено после жалобы
 }
 
 const rid = (n = 8) => randomBytes(n).toString('hex')
@@ -65,7 +72,7 @@ export function slugify(s: string): string {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
 }
 
-export async function createPartner(input: { name: string; phone: string; cats: string[]; city: string }): Promise<Partner | 'exists'> {
+export async function createPartner(input: { name: string; phone: string; cats: string[]; city: string; src?: string }): Promise<Partner | 'exists'> {
   const existingId = await kvGet<string>(`pphone:${input.phone}`)
   if (existingId) {
     // Компанию с таким телефоном уже добавили импортом: владелец регистрируется и забирает страницу
@@ -81,7 +88,7 @@ export async function createPartner(input: { name: string; phone: string; cats: 
   const id = rid(6)
   const base = slugify(input.name) || input.cats[0] || 'partner'
   const slug = `${base}-${rid(2)}`
-  const p: Partner = { id, slug, token: rid(16), name: input.name, phone: input.phone, cats: input.cats, city: input.city, leads: 0, createdAt: Date.now() }
+  const p: Partner = { id, slug, token: rid(16), name: input.name, phone: input.phone, cats: input.cats, city: input.city, leads: 0, createdAt: Date.now(), src: input.src }
   await savePartner(p)
   await kvSet(`pphone:${p.phone}`, p.id)
   await kvSet(`pslug:${p.slug}`, p.id)
@@ -138,12 +145,26 @@ export async function listPartners(): Promise<Partner[]> {
 export const getConv = (id: string) => kvGet<Conv>(`conv:${id}`)
 export const saveConv = (c: Conv) => kvSet(`conv:${c.id}`, c)
 
-export async function createConv(partnerId: string, clientName: string, clientPhone: string, text: string, acctId?: string): Promise<Conv> {
-  const c: Conv = { id: rid(8), partnerId, clientName, clientPhone, accepted: false, createdAt: Date.now(), msgs: [{ from: 'client', text, at: Date.now() }], acctId }
+export async function createConv(partnerId: string, clientName: string, clientPhone: string, text: string, acctId?: string, meta?: { cat?: string; reqId?: string }): Promise<Conv> {
+  const c: Conv = { id: rid(8), partnerId, clientName, clientPhone, accepted: false, createdAt: Date.now(), msgs: [{ from: 'client', text, at: Date.now() }], acctId, cat: meta?.cat, reqId: meta?.reqId }
   await saveConv(c)
   const ids = (await kvGet<string[]>(`pconv:${partnerId}`)) ?? []
   await kvSet(`pconv:${partnerId}`, [c.id, ...ids].slice(0, 300))
+  const all = await kvGet<string[]>('convidx')
+  if (all) await kvSet('convidx', [c.id, ...all].slice(0, 5000))
   return c
+}
+
+// Последние диалоги по всей платформе (для статистики и напоминаний). Индекс создаётся при первом обращении.
+export async function listRecentConvs(limit = 2000): Promise<Conv[]> {
+  let ids = await kvGet<string[]>('convidx')
+  if (!ids) {
+    const all = await listAllConvs()
+    ids = all.map(c => c.id).slice(0, 5000)
+    await kvSet('convidx', ids)
+  }
+  const list = await Promise.all(ids.slice(0, limit).map(getConv))
+  return list.filter((c): c is Conv => !!c)
 }
 
 export async function listConvs(partnerId: string): Promise<Conv[]> {
@@ -216,29 +237,41 @@ export interface ImportItem {
   features?: string[]; items?: { title: string; meta: string; price: string }[]; source?: { name: string; url: string }
 }
 
-// Импорт компаний из согласованного источника (JSON). Дубли по телефону или названию и району пропускаются.
-export async function importPartner(i: ImportItem, validCats: Set<string>, validCities: Set<string>, defSource?: { name: string; url: string }): Promise<'created' | 'skipped' | 'invalid'> {
+// Есть ли уже такая компания: по телефону или по названию в том же районе
+export async function findDuplicate(name: string, phone: string | null, city: string): Promise<{ kind: 'phone' | 'name'; id: string } | null> {
+  if (phone) { const id = await kvGet<string>(`pphone:${phone}`); if (id) return { kind: 'phone', id } }
+  const id = await kvGet<string>(`pname:${slugify(name)}:${city}`)
+  return id ? { kind: 'name', id } : null
+}
+
+// Импорт компаний из согласованного источника (JSON, CSV). Дубли по телефону или названию и району пропускаются.
+// live: компания сама согласилась, заявки идут ей сразу (иначе она ждёт, пока владелец заберёт страницу).
+export async function importPartnerFull(i: ImportItem, validCats: Set<string>, validCities: Set<string>, defSource?: { name: string; url: string }, opts?: { live?: boolean; src?: string }): Promise<{ status: 'created' | 'skipped' | 'invalid'; partner?: Partner }> {
   const name = String(i.name ?? '').trim().slice(0, 120)
   const cats = (Array.isArray(i.cats) ? i.cats : []).filter(c => validCats.has(c)).slice(0, 12)
-  if (!name || !cats.length) return 'invalid'
+  if (!name || !cats.length) return { status: 'invalid' }
   const city = i.city && validCities.has(i.city) ? i.city : 'podmoskove'
   const phone = i.phone ? (await import('./phone')).normalizePhone(String(i.phone)) : null
+  if (await findDuplicate(name, phone, city)) return { status: 'skipped' }
   const nameKey = `pname:${slugify(name)}:${city}`
-  if ((phone && (await kvGet<string>(`pphone:${phone}`))) || (await kvGet<string>(nameKey))) return 'skipped'
   const id = rid(6)
   const p: Partner = {
     id, slug: `${slugify(name) || 'company'}-${rid(2)}`, token: rid(16), name, phone: phone ?? '', cats, city, leads: 0, createdAt: Date.now(),
     desc: i.desc ? String(i.desc).slice(0, 600) : undefined, since: i.since, price: i.price ? String(i.price).slice(0, 80) : undefined,
     features: Array.isArray(i.features) ? i.features.slice(0, 8).map(x => String(x).slice(0, 120)) : undefined,
     items: Array.isArray(i.items) ? i.items.slice(0, 12) : undefined,
-    imported: true, claimed: false, source: i.source ?? defSource,
+    imported: true, claimed: !!opts?.live, source: i.source ?? defSource, src: opts?.src,
   }
   await savePartner(p)
   if (phone) await kvSet(`pphone:${phone}`, id)
   await kvSet(nameKey, id)
   await kvSet(`pslug:${p.slug}`, id)
   await kvSet(`ptok:${p.token}`, id)
-  return 'created'
+  return { status: 'created', partner: p }
+}
+
+export async function importPartner(i: ImportItem, validCats: Set<string>, validCities: Set<string>, defSource?: { name: string; url: string }): Promise<'created' | 'skipped' | 'invalid'> {
+  return (await importPartnerFull(i, validCats, validCities, defSource)).status
 }
 
 export async function markDone(convId: string, partnerId: string, amount?: number): Promise<Conv | null> {

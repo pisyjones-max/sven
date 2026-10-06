@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { formatPhone } from '@/lib/phone'
 import { addOrder } from '@/lib/orders-client'
 import { TgNotify } from './TgNotify'
+import { useCaptcha } from './Captcha'
 import { QUICK_ASK_BUILDERS, QUICK_ASK_SERVICES } from '@/lib/questions'
 
 interface Msg { from: 'client' | 'partner'; text: string; at: number }
@@ -18,6 +19,7 @@ export function ChatWidget({ slug, partnerName, builder = false, asks: asksProp 
   const [consent, setConsent] = useState(false)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const cap = useCaptcha()
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -63,10 +65,10 @@ export function ChatWidget({ slug, partnerName, builder = false, asks: asksProp 
     try {
       const r = await fetch('/api/chat/start', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, name, phone, text, consent, website: '' }),
+        body: JSON.stringify({ slug, name, phone, text, consent, captcha: cap.token, website: '' }),
       })
       const j = await r.json()
-      if (!j.ok) setErr(j.error === 'bad_phone' ? 'Проверьте номер телефона' : j.error === 'no_consent' ? 'Нужно согласие на обработку данных' : 'Не удалось отправить, попробуйте ещё раз')
+      if (!j.ok) { cap.reset(); setErr(j.error === 'captcha' ? 'Подтвердите, что вы не робот' : j.error === 'rate' ? 'Слишком много попыток, попробуйте позже' : j.error === 'bad_phone' ? 'Проверьте номер телефона' : j.error === 'no_consent' ? 'Нужно согласие на обработку данных' : 'Не удалось отправить, попробуйте ещё раз') }
       else {
         try { localStorage.setItem(key, j.id) } catch { /* ok */ }
         setConvId(j.id)
@@ -107,8 +109,9 @@ export function ChatWidget({ slug, partnerName, builder = false, asks: asksProp 
         <textarea placeholder="Что нужно? Адрес, размеры, сроки" rows={3} value={text} onChange={e => setText(e.target.value)} required />
         <label className="check"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
           <span>Согласен на обработку данных и хранение переписки на платформе. <Link href="/privacy">Политика</Link></span></label>
+        {cap.widget}
         {err && <p className="err">{err}</p>}
-        <button className="btn" disabled={busy}>{busy ? 'Отправляем…' : 'Отправить'}</button>
+        <button className="btn" disabled={busy || (cap.enabled && !cap.token)}>{busy ? 'Отправляем…' : 'Отправить'}</button>
         <p className="muted small">Переписка ведётся здесь: ответ придёт на эту страницу.</p>
       </form>
     )

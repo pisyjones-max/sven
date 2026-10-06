@@ -6,7 +6,8 @@ interface Msg { from: 'client' | 'partner'; text: string; at: number }
 interface Level { done: number; percent: number; next: { orders: number; percent: number; left: number } | null }
 interface Conv { complaint: boolean; id: string; clientName: string; clientPhone: string | null; accepted: boolean; createdAt: number; msgs: Msg[]; done: number; level: Level | null }
 interface Tier { orders: number; percent: number }
-interface Data { partner: { name: string; slug: string; leads: number; tgBound: boolean; tiers: Tier[] | null }; convs: Conv[] }
+interface Billing { balance: number; prices: { title: string; lead: number }[]; ledger: { at: number; delta: number; reason: string }[]; contact: string }
+interface Data { partner: { name: string; slug: string; leads: number; tgBound: boolean; tiers: Tier[] | null }; billing: Billing | null; convs: Conv[] }
 
 const PRESET_TITLES: Record<string, string> = { soft: 'Мягкая: 3% и 5%', standard: 'Стандарт: от 3% до 10%', generous: 'Щедрая: от 5% до 15%' }
 
@@ -25,6 +26,18 @@ function LoyaltyBox({ token, tiers, onChanged }: { token: string; tiers: Tier[] 
         {Object.entries(PRESET_TITLES).map(([k, t]) => <button key={k} type="button" className="chip" onClick={() => set({ preset: k })}>{t}</button>)}
         {tiers && <button type="button" className="chip" onClick={() => set({ off: true })}>Выключить</button>}
       </div>
+    </div>
+  )
+}
+
+function BalanceBox({ b }: { b: Billing }) {
+  return (
+    <div className="card">
+      <h2>Баланс: {b.balance} ₽</h2>
+      <p className="small">Списывается только за принятую заявку (когда вы ответили клиенту): {b.prices.map(p => `${p.title} ${p.lead} ₽`).join(', ')}. Если заявка не по теме или спам, нажмите «Не по теме»: деньги вернутся.</p>
+      {b.balance < 400 && <p className="notice bad small">Баланс заканчивается. Без денег на балансе заявки не приходят.</p>}
+      <p className="small muted">Пополнение: {b.contact ? `напишите ${b.contact}` : 'напишите администратору платформы'}.</p>
+      {b.ledger.length > 0 && <details><summary className="small">История</summary>{b.ledger.map((l, i) => <p key={i} className="small">{new Date(l.at).toLocaleDateString('ru-RU')} · {l.delta > 0 ? '+' : ''}{l.delta} ₽ · {l.reason}</p>)}</details>}
     </div>
   )
 }
@@ -56,7 +69,8 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
     const t = text.trim()
     if (!t || !open) return
     setText('')
-    await fetch('/api/cabinet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, id: open, text: t }) }).catch(() => {})
+    const r = await fetch('/api/cabinet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, id: open, text: t }) }).catch(() => null)
+    if (r && r.status === 402) { setText(t); window.alert('Недостаточно средств на балансе, чтобы принять заявку. Пополните баланс.') }
     load()
   }
 
@@ -84,6 +98,7 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
         <p>Принятых заявок: <b>{data.partner.leads}</b> · <Link href={`/p/${data.partner.slug}`}>ваша страница</Link></p>
         {!data.partner.tgBound && tgLink && <p><a className="btn" href={tgLink}>Подключить Telegram для заявок</a></p>}
       </div>
+      {data.billing && <BalanceBox b={data.billing} />}
       <LoyaltyBox token={token} tiers={data.partner.tiers} onChanged={load} />
       {cur ? (
         <div className="card chat">
