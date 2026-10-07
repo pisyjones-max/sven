@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { existsSync, readdirSync, statSync } from 'fs'
 import { kvGet, kvSet, kvScanKeys } from '@/lib/kv'
-import { getConv, getPartner, listPartners, listRecentConvs, rememberTgMsg, saveConv } from '@/lib/store'
+import { getConv, getPartner, isLive, listPartners, listRecentConvs, rememberTgMsg, saveConv } from '@/lib/store'
 import { tgAdmin, tgSend } from '@/lib/tg'
 import { SITE_URL } from '@/lib/site'
-import { HOUR, LOST_AFTER, dailyStats, dayKey, lostRequests, mskHour, realConvs } from '@/lib/stats'
+import { HOUR, LOST_AFTER, dailyStats, dayKey, lostRequests, mskHour, partnerStats, realConvs } from '@/lib/stats'
+import { balanceOf, billingOn } from '@/lib/billing'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,7 +58,26 @@ async function run(req: NextRequest) {
     const last = existsSync(dir) ? Math.max(0, ...readdirSync(dir).filter(f => f.startsWith('kv-')).map(f => statSync(`${dir}/${f}`).mtimeMs)) : 0
     if (now - last > 36 * HOUR) await tgAdmin('⚠️ Ночная копия базы не найдена или устарела (старше 36 часов). Проверьте cron и deploy/backup.sh.')
   }
-  return NextResponse.json({ ok: true, reminded, byId: byId.size })
+  // Недельный отчёт компаниям: по понедельникам после 10:00 МСК, один раз на компанию в неделю
+  let weekly = 0
+  const msk = new Date(now + 3 * HOUR)
+  if (msk.getUTCDay() === 1 && mskHour(now) >= 10) {
+    const weekKey = dayKey(now)
+    const stats = new Map(partnerStats(real, partners, 7, now).map(x => [x.id, x]))
+    for (const p of partners) {
+      if (p.system || p.demo || !p.tgChatId || !isLive(p)) continue
+      if (await kvGet(`weekly:${weekKey}:${p.id}`)) continue
+      await kvSet(`weekly:${weekKey}:${p.id}`, now)
+      const st = stats.get(p.id)
+      const money = billingOn() ? `\nСписано за неделю: ${st?.charged ?? 0} ₽ (возвращено ${st?.refunded ?? 0} ₽). Баланс: ${balanceOf(p)} ₽.` : ''
+      const text = st
+        ? `📈 Итоги недели\nЗаявок получено: ${st.received}, принято: ${st.answered}${st.avgMin !== null ? `, среднее время ответа ${st.avgMin} мин` : ''}.${st.received > st.answered ? `\nНе отвечено: ${st.received - st.answered}. Чем быстрее ответ, тем чаще клиент выбирает вас.` : ''}${money}`
+        : `📈 Итоги недели\nЗаявок на этой неделе не было. Проверьте, что в профиле указаны все ваши услуги и район.${money}`
+      await tgSend(p.tgChatId, `${text}\nКабинет: ${SITE_URL}/cabinet/${p.token}`)
+      weekly++
+    }
+  }
+  return NextResponse.json({ ok: true, reminded, weekly, byId: byId.size })
 }
 export const GET = run
 export const POST = run

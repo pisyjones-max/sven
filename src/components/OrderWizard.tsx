@@ -1,7 +1,7 @@
 'use client'
 import { useCaptcha } from './Captcha'
 import { goal } from '@/lib/metrika'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { CATEGORIES, CITIES, ICON, getCategory } from '@/lib/catalog'
 import { questionsFor } from '@/lib/questions'
@@ -14,14 +14,8 @@ interface Sent { slug: string; name: string; convId: string }
 const CONTACT_KEY = 'doma-contact'
 
 // Быстрый заказ: выбираете варианты, заявка собирается и уходит сама. Тот же сценарий есть в Telegram и MAX.
-export function OrderWizard({ cat: catProp, city: cityProp, slug, cats, title = 'Быстрая заявка' }: { cat?: string; city?: string; slug?: string; cats?: string[]; title?: string }) {
+function OrderWizardInner({ cat: catProp, city: cityProp, slug, cats, title = 'Быстрая заявка' }: { cat?: string; city?: string; slug?: string; cats?: string[]; title?: string }) {
   const [cat, setCat] = useState(catProp ?? '')
-  // «Заказать снова»: ссылка /p/<компания>?cat=<раздел> сразу открывает вопросы нужного раздела
-  useEffect(() => {
-    if (catProp || !slug) return
-    const c = new URLSearchParams(window.location.search).get('cat')
-    if (c && cats?.includes(c)) { setCat(c); setStep(1) }
-  }, [catProp, slug, cats])
   const [step, setStep] = useState(catProp ? 1 : 0) // 0 = выбор раздела (если не задан), дальше вопросы, затем контакты
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [name, setName] = useState('')
@@ -154,4 +148,13 @@ export function OrderWizard({ cat: catProp, city: cityProp, slug, cats, title = 
       {step === 0 || step === contactStep ? <ChannelButtons cat={cat || undefined} /> : null}
     </form>
   )
+}
+
+const noopSubscribe = () => () => {}
+
+// «Заказать снова»: ссылка /p/<компания>?cat=<раздел> сразу открывает вопросы нужного раздела
+export function OrderWizard(props: { cat?: string; city?: string; slug?: string; cats?: string[]; title?: string }) {
+  const fromUrl = useSyncExternalStore(noopSubscribe, () => new URLSearchParams(window.location.search).get('cat') ?? '', () => '')
+  const cat = props.cat ?? (props.slug && props.cats?.includes(fromUrl) ? fromUrl : undefined)
+  return <OrderWizardInner key={cat ?? ''} {...props} cat={cat} />
 }
