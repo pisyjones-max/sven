@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { CATEGORIES, CITIES, KIND_LABEL, Kind } from '@/lib/catalog'
 import { formatPhone } from '@/lib/phone'
 import { useCaptcha } from './Captcha'
+import { goal } from '@/lib/metrika'
 
 export function RegisterForm({ catSlugs, src, defaultCats }: { catSlugs?: string[]; src?: string; defaultCats?: string[] } = {}) {
   const cap = useCaptcha()
@@ -30,7 +31,7 @@ export function RegisterForm({ catSlugs, src, defaultCats }: { catSlugs?: string
         body: JSON.stringify({ phone, cats, city, name, code, src, captcha: cap.token, website: '' }),
       })
       const j = await r.json()
-      if (j.ok) setDone(j)
+      if (j.ok) { goal('master_registered', { src: src ?? 'site' }); setDone(j) }
       else if (j.error === 'need_code') {
         // SMS подключён: отправляем код и просим ввести
         const r2 = await fetch('/api/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) })

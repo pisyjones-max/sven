@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { getOrders } from '@/lib/orders-client'
 import { SmsCodeForm } from './SmsCodeForm'
 import { TgNotify } from './TgNotify'
+import { goal } from '@/lib/metrika'
 
 interface Level { done: number; percent: number; next: { orders: number; percent: number; left: number } | null }
-interface Order { loyalty: Level | null; id: string; slug: string; partnerName: string; cat: string; createdAt: number; accepted: boolean; last: string; rating: { stars: number; comment: string } | null; paid: number | null }
+interface Order { loyalty: Level | null; id: string; slug: string; partnerName: string; cat: string; catSlug: string; times: number; createdAt: number; accepted: boolean; last: string; rating: { stars: number; comment: string } | null; paid: number | null }
 
 function OrderCard({ o, onSaved }: { o: Order; onSaved: () => void }) {
   const [stars, setStars] = useState(o.rating?.stars ?? 0)
@@ -43,7 +44,11 @@ function OrderCard({ o, onSaved }: { o: Order; onSaved: () => void }) {
           {o.loyalty.next && <span className="bar"><i style={{ width: `${Math.min(100, (o.loyalty.done / o.loyalty.next.orders) * 100)}%` }} /></span>}
         </div>
       )}
-      <Link className="btn ghost sm" href={`/p/${o.slug}`}>Открыть чат</Link>
+      <div className="row">
+        <Link className="btn ghost sm" href={`/p/${o.slug}`}>Открыть чат</Link>
+        {o.accepted && <Link className="btn sm" href={`/p/${o.slug}?cat=${o.catSlug}`} onClick={() => goal('reorder_click')}>Заказать снова</Link>}
+      </div>
+      {o.accepted && o.times > 1 && <p className="muted small">Вы уже {o.times} раз обращались к этой компании.</p>}
       {o.accepted ? (
         <div className="rate">
           <p className="label">{o.rating ? 'Ваша оценка (можно изменить)' : 'Оцените работу'}</p>

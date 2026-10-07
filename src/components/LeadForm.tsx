@@ -6,6 +6,7 @@ import { formatPhone } from '@/lib/phone'
 import { addOrder } from '@/lib/orders-client'
 import { TgNotify } from './TgNotify'
 import { useCaptcha } from './Captcha'
+import { goal } from '@/lib/metrika'
 
 interface Sent { slug: string; name: string; convId: string }
 
@@ -34,6 +35,7 @@ export function LeadForm({ cat, city, title = 'Подберём исполнит
       if (!j.ok) { cap.reset(); setErr(j.error === 'captcha' ? 'Подтвердите, что вы не робот' : j.error === 'rate' ? 'Слишком много попыток, попробуйте позже' : j.error === 'bad_phone' ? 'Проверьте номер телефона' : j.error === 'no_consent' ? 'Нужно согласие на обработку данных' : j.error === 'no_cat' ? 'Выберите, что нужно' : 'Не удалось отправить, попробуйте ещё раз') }
       else {
         for (const s of j.sent as Sent[]) { try { localStorage.setItem(`doma-chat:${s.slug}`, s.convId) } catch { /* ok */ } addOrder({ id: s.convId, slug: s.slug }) }
+        goal('lead_sent', { form: 'lead' })
         setDone({ sent: j.sent, waiting: j.sent.length === 0 })
       }
     } catch { setErr('Нет связи, попробуйте ещё раз') }

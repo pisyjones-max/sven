@@ -1,5 +1,6 @@
 'use client'
 import { useCaptcha } from './Captcha'
+import { goal } from '@/lib/metrika'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { CATEGORIES, CITIES, ICON, getCategory } from '@/lib/catalog'
@@ -15,6 +16,12 @@ const CONTACT_KEY = 'doma-contact'
 // Быстрый заказ: выбираете варианты, заявка собирается и уходит сама. Тот же сценарий есть в Telegram и MAX.
 export function OrderWizard({ cat: catProp, city: cityProp, slug, cats, title = 'Быстрая заявка' }: { cat?: string; city?: string; slug?: string; cats?: string[]; title?: string }) {
   const [cat, setCat] = useState(catProp ?? '')
+  // «Заказать снова»: ссылка /p/<компания>?cat=<раздел> сразу открывает вопросы нужного раздела
+  useEffect(() => {
+    if (catProp || !slug) return
+    const c = new URLSearchParams(window.location.search).get('cat')
+    if (c && cats?.includes(c)) { setCat(c); setStep(1) }
+  }, [catProp, slug, cats])
   const [step, setStep] = useState(catProp ? 1 : 0) // 0 = выбор раздела (если не задан), дальше вопросы, затем контакты
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [name, setName] = useState('')
@@ -66,9 +73,11 @@ export function OrderWizard({ cat: catProp, city: cityProp, slug, cats, title = 
           try { localStorage.setItem(`doma-chat:${slug}`, j.id) } catch { /* ok */ }
           addOrder({ id: j.id, slug })
           window.dispatchEvent(new CustomEvent('doma-chat-started', { detail: { slug } }))
+          goal('lead_sent', { form: 'chat' })
           setDone({ sent: [], chat: true })
         } else {
           for (const s of j.sent as Sent[]) { try { localStorage.setItem(`doma-chat:${s.slug}`, s.convId) } catch { /* ok */ } addOrder({ id: s.convId, slug: s.slug }) }
+          goal('lead_sent', { form: 'wizard', cat })
           setDone({ sent: j.sent })
         }
       }

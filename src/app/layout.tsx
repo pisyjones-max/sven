@@ -4,6 +4,7 @@ import { SITE_NAME, SITE_URL } from '@/lib/site'
 import { jsonLd, orgSchema } from '@/lib/schema'
 import { ThemePicker } from '@/components/ThemePicker'
 import { AppChrome } from '@/components/AppChrome'
+import { Metrika } from '@/components/Metrika'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="wrap">{children}</main>
         <Footer />
         <AppChrome />
+        <Metrika />
         {process.env.SEED_DEMO === '1' && <ThemePicker />}
       </body>
     </html>
