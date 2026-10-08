@@ -5,6 +5,7 @@ import { doneForPartner } from '@/lib/loyalty-server'
 import { levelFor } from '@/lib/loyalty'
 import { balanceOf, billingOn, getLedger } from '@/lib/billing'
 import { CATEGORIES } from '@/lib/catalog'
+import { recsFor } from '@/lib/people'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
     return { ...partnerView(c), done, level: levelFor(p.loyalty?.tiers, done) }
   }))
   return NextResponse.json({ ok: true, partner: { name: p.name, slug: p.slug, leads: p.leads, tgBound: !!p.tgChatId, tiers: p.loyalty?.tiers ?? null },
+    recs: (await recsFor(p.id)).slice(0, 10).map(r => ({ name: r.name, comment: r.comment, at: r.at, uses: r.uses })),
     billing: billingOn() ? { balance: balanceOf(p), prices: CATEGORIES.filter(c => p.cats.includes(c.slug)).map(c => ({ title: c.title, lead: c.lead })), ledger: await getLedger(p.id), contact: process.env.NEXT_PUBLIC_SUPPORT_CONTACT ?? '' } : null,
     convs })
 }

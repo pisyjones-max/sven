@@ -6,7 +6,7 @@ import { formatPhone } from '@/lib/phone'
 import { useCaptcha } from './Captcha'
 import { goal } from '@/lib/metrika'
 
-export function RegisterForm({ catSlugs, src, defaultCats }: { catSlugs?: string[]; src?: string; defaultCats?: string[] } = {}) {
+export function RegisterForm({ catSlugs, src, defaultCats, person }: { catSlugs?: string[]; src?: string; defaultCats?: string[]; person?: boolean } = {}) {
   const cap = useCaptcha()
   const [phone, setPhone] = useState('')
   const [cats, setCats] = useState<string[]>(defaultCats ?? [])
@@ -75,7 +75,7 @@ export function RegisterForm({ catSlugs, src, defaultCats }: { catSlugs?: string
           {CITIES.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
         </select>
       </label>
-      <label>Название компании <span className="muted">(необязательно)</span>
+      <label>{person ? 'Как к вам обращаться' : 'Название компании'} <span className="muted">(необязательно)</span>
         <input value={name} onChange={e => setName(e.target.value)} maxLength={80} />
       </label>
       {needCode && (

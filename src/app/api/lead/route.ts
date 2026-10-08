@@ -29,6 +29,6 @@ export async function POST(req: NextRequest) {
   const text = composeRequest(cat.title, city && city.slug !== 'podmoskove' ? city.name : city?.name, cat.slug, b.answers as Record<string, unknown> | undefined, note)
 
   const acct = await ensureAccount(req.headers.get('user-agent') ?? '')
-  const sent = await dispatchLead({ cat, city, name, phone, text, acctId: acct.acctId })
+  const sent = await dispatchLead({ cat, city, name, phone, text, acctId: acct.acctId, private: b.private === true })
   return NextResponse.json({ ok: true, sent })
 }

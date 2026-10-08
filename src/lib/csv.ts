@@ -36,6 +36,7 @@ const CAT_RE: [string, RegExp][] = [
   ['vyvoz-musora', /мусор|вывоз|vyvoz/i],
   ['pokos-travy', /покос|трав[аыу]|коси|триммер|pokos/i],
   ['uborka-snega', /снег|снеж|uborka-snega/i],
+  ['pomosch-sosedu', /по.?соседски|помощь по соседству|поручени|pomosch/i],
   ['uborka-uchastka', /расчист|участк|uborka-uchastka/i],
   ['spil-derevev', /спил|удален\w+ дерев|spil/i],
   ['zabor', /забор|zabor/i],

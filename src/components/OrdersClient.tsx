@@ -5,9 +5,10 @@ import { getOrders } from '@/lib/orders-client'
 import { SmsCodeForm } from './SmsCodeForm'
 import { TgNotify } from './TgNotify'
 import { goal } from '@/lib/metrika'
+import { PeopleSection } from './PeopleSection'
 
 interface Level { done: number; percent: number; next: { orders: number; percent: number; left: number } | null }
-interface Order { loyalty: Level | null; id: string; slug: string; partnerName: string; cat: string; catSlug: string; times: number; createdAt: number; accepted: boolean; last: string; rating: { stars: number; comment: string } | null; paid: number | null }
+interface Order { private?: boolean; loyalty: Level | null; id: string; slug: string; partnerName: string; cat: string; catSlug: string; times: number; createdAt: number; accepted: boolean; last: string; rating: { stars: number; comment: string } | null; paid: number | null }
 
 function OrderCard({ o, onSaved }: { o: Order; onSaved: () => void }) {
   const [stars, setStars] = useState(o.rating?.stars ?? 0)
@@ -32,7 +33,7 @@ function OrderCard({ o, onSaved }: { o: Order; onSaved: () => void }) {
       <div className="order-top">
         <div>
           <Link href={`/p/${o.slug}`}><b>{o.partnerName}</b></Link>
-          <span className="muted small"> · {o.cat} · {new Date(o.createdAt).toLocaleDateString('ru-RU')}</span>
+          <span className="muted small"> · {o.cat} · {new Date(o.createdAt).toLocaleDateString('ru-RU')}{o.private ? ' · 🔒 приватный' : ''}</span>
         </div>
         <span className={`status ${o.accepted ? 'ok' : ''}`}>{o.accepted ? 'Компания ответила' : 'Ждём ответа'}</span>
       </div>
@@ -179,7 +180,10 @@ export function OrdersClient({ joined, badInvite }: { joined: boolean; badInvite
         ? <div className="card"><p>Заказов пока нет. Напишите любой компании или оставьте заявку, и они появятся здесь.</p><p><Link className="btn" href="/">На главную</Link></p><p className="muted small">Уже заказывали с другого устройства? <Link href="/login">Войти по номеру телефона</Link></p></div>
         : <>
             <p className="muted">Заказов: <b>{orders.length}</b>{total > 0 && <> · Потрачено по отметкам: <b>{total.toLocaleString('ru-RU')} ₽</b></>}</p>
+            <PeopleSection />
+            <h2>Заказы</h2>
             {orders.map(o => <OrderCard key={o.id} o={o} onSaved={load} />)}
+            <div className="card"><h3>Хотите подработать?</h3><p className="muted">Помогайте соседям: привезти, принести, подмести дорожку, покосить траву. Заявки приходят в Telegram, а вы сами решаете, что взять.</p><Link className="btn ghost" href="/helper">Стать помощником</Link></div>
           </>}
       {me.role === 'owner' && <AccountCard me={me} onChanged={load} />}
       {me.role === 'owner' && <ShareCard devices={me.devices ?? []} onChanged={load} />}

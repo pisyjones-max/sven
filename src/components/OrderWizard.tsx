@@ -14,7 +14,7 @@ interface Sent { slug: string; name: string; convId: string }
 const CONTACT_KEY = 'doma-contact'
 
 // Быстрый заказ: выбираете варианты, заявка собирается и уходит сама. Тот же сценарий есть в Telegram и MAX.
-function OrderWizardInner({ cat: catProp, city: cityProp, slug, cats, title = 'Быстрая заявка' }: { cat?: string; city?: string; slug?: string; cats?: string[]; title?: string }) {
+function OrderWizardInner({ cat: catProp, city: cityProp, slug, cats, title = 'Быстрая заявка', rec }: { cat?: string; city?: string; slug?: string; cats?: string[]; title?: string; rec?: string }) {
   const [cat, setCat] = useState(catProp ?? '')
   const [step, setStep] = useState(catProp ? 1 : 0) // 0 = выбор раздела (если не задан), дальше вопросы, затем контакты
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -23,6 +23,7 @@ function OrderWizardInner({ cat: catProp, city: cityProp, slug, cats, title = '�
   const [city, setCity] = useState(cityProp ?? 'podmoskove')
   const [note, setNote] = useState('')
   const [consent, setConsent] = useState(false)
+  const [priv, setPriv] = useState(false)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const cap = useCaptcha()
@@ -56,8 +57,8 @@ function OrderWizardInner({ cat: catProp, city: cityProp, slug, cats, title = '�
     setErr(''); setBusy(true)
     try {
       const body = slug
-        ? { slug, cat, answers, note, name, phone, consent, captcha: cap.token, website: '' }
-        : { cat, city, answers, note, name, phone, consent, captcha: cap.token, website: '' }
+        ? { slug, cat, answers, note, name, phone, consent, rec, private: priv, captcha: cap.token, website: '' }
+        : { cat, city, answers, note, name, phone, consent, private: priv, captcha: cap.token, website: '' }
       const r = await fetch(slug ? '/api/chat/start' : '/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const j = await r.json()
       if (!j.ok) { cap.reset(); setErr(j.error === 'captcha' ? 'Подтвердите, что вы не робот' : j.error === 'rate' ? 'Слишком много попыток, попробуйте позже' : j.error === 'bad_phone' ? 'Проверьте номер телефона' : j.error === 'no_consent' ? 'Нужно согласие на обработку данных' : 'Не удалось отправить, попробуйте ещё раз') }
@@ -136,6 +137,7 @@ function OrderWizardInner({ cat: catProp, city: cityProp, slug, cats, title = '�
             </select>
           )}
           <textarea placeholder="Комментарий, адрес (необязательно)" rows={2} value={note} onChange={e => setNote(e.target.value)} />
+          <label className="check"><input type="checkbox" checked={priv} onChange={e => setPriv(e.target.checked)} /><span>Приватный заказ: близкие, подключённые к кабинету, его не увидят (например, подарок)</span></label>
           <label className="check"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
             <span>Согласен на обработку данных и хранение переписки. <Link href="/privacy">Политика</Link></span></label>
           {cap.widget}
@@ -155,6 +157,7 @@ const noopSubscribe = () => () => {}
 // «Заказать снова»: ссылка /p/<компания>?cat=<раздел> сразу открывает вопросы нужного раздела
 export function OrderWizard(props: { cat?: string; city?: string; slug?: string; cats?: string[]; title?: string }) {
   const fromUrl = useSyncExternalStore(noopSubscribe, () => new URLSearchParams(window.location.search).get('cat') ?? '', () => '')
+  const rec = useSyncExternalStore(noopSubscribe, () => new URLSearchParams(window.location.search).get('rec') ?? '', () => '')
   const cat = props.cat ?? (props.slug && props.cats?.includes(fromUrl) ? fromUrl : undefined)
-  return <OrderWizardInner key={cat ?? ''} {...props} cat={cat} />
+  return <OrderWizardInner key={cat ?? ''} {...props} cat={cat} rec={rec || undefined} />
 }

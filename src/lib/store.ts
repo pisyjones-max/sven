@@ -58,6 +58,9 @@ export interface Conv {
   remindedAt?: number // компании напомнили в Telegram, что заявка без ответа
   charged?: number // списано за принятую заявку, ₽
   refunded?: boolean // списанное возвращено после жалобы
+  private?: boolean // приватный заказ: подключённые близкие его не видят
+  recBy?: string // кабинет, который порекомендовал эту компанию
+  recName?: string // имя рекомендателя (для компании)
 }
 
 const rid = (n = 8) => randomBytes(n).toString('hex')
@@ -145,8 +148,8 @@ export async function listPartners(): Promise<Partner[]> {
 export const getConv = (id: string) => kvGet<Conv>(`conv:${id}`)
 export const saveConv = (c: Conv) => kvSet(`conv:${c.id}`, c)
 
-export async function createConv(partnerId: string, clientName: string, clientPhone: string, text: string, acctId?: string, meta?: { cat?: string; reqId?: string }): Promise<Conv> {
-  const c: Conv = { id: rid(8), partnerId, clientName, clientPhone, accepted: false, createdAt: Date.now(), msgs: [{ from: 'client', text, at: Date.now() }], acctId, cat: meta?.cat, reqId: meta?.reqId }
+export async function createConv(partnerId: string, clientName: string, clientPhone: string, text: string, acctId?: string, meta?: { cat?: string; reqId?: string; private?: boolean; recBy?: string; recName?: string }): Promise<Conv> {
+  const c: Conv = { id: rid(8), partnerId, clientName, clientPhone, accepted: false, createdAt: Date.now(), msgs: [{ from: 'client', text, at: Date.now() }], acctId, cat: meta?.cat, reqId: meta?.reqId, private: meta?.private || undefined, recBy: meta?.recBy, recName: meta?.recName }
   await saveConv(c)
   const ids = (await kvGet<string[]>(`pconv:${partnerId}`)) ?? []
   await kvSet(`pconv:${partnerId}`, [c.id, ...ids].slice(0, 300))

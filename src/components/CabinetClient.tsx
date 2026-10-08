@@ -7,7 +7,8 @@ interface Level { done: number; percent: number; next: { orders: number; percent
 interface Conv { complaint: boolean; id: string; clientName: string; clientPhone: string | null; accepted: boolean; createdAt: number; msgs: Msg[]; done: number; level: Level | null }
 interface Tier { orders: number; percent: number }
 interface Billing { balance: number; prices: { title: string; lead: number }[]; ledger: { at: number; delta: number; reason: string }[]; contact: string }
-interface Data { partner: { name: string; slug: string; leads: number; tgBound: boolean; tiers: Tier[] | null }; billing: Billing | null; convs: Conv[] }
+interface RecRow { name: string; comment: string; at: number; uses: number }
+interface Data { recs?: RecRow[]; partner: { name: string; slug: string; leads: number; tgBound: boolean; tiers: Tier[] | null }; billing: Billing | null; convs: Conv[] }
 
 const PRESET_TITLES: Record<string, string> = { soft: 'Мягкая: 3% и 5%', standard: 'Стандарт: от 3% до 10%', generous: 'Щедрая: от 5% до 15%' }
 
@@ -98,6 +99,13 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
         <p>Принятых заявок: <b>{data.partner.leads}</b> · <Link href={`/p/${data.partner.slug}`}>ваша страница</Link></p>
         {!data.partner.tgBound && tgLink && <p><a className="btn" href={tgLink}>Подключить Telegram для заявок</a></p>}
       </div>
+      {data.recs && data.recs.length > 0 && (
+        <div className="card">
+          <h2>🤝 Вас рекомендуют: {data.recs.length}</h2>
+          {data.recs.map((r, i) => <p key={i} className="small"><b>{r.name}</b>{r.comment ? `: «${r.comment}»` : ''}{r.uses > 0 ? ` · пришло по этой рекомендации: ${r.uses}` : ''}</p>)}
+          <p className="muted small">Эти люди вас советуют знакомым. Ответьте им быстро и по-честному: так о вас узнают новые клиенты.</p>
+        </div>
+      )}
       {data.billing && <BalanceBox b={data.billing} />}
       <LoyaltyBox token={token} tiers={data.partner.tiers} onChanged={load} />
       {cur ? (

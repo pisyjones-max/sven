@@ -7,6 +7,7 @@ import { getCategory } from '@/lib/catalog'
 import { composeRequest } from '@/lib/questions'
 import { verifyCaptcha } from '@/lib/captcha'
 import { clientIp, rateLimit } from '@/lib/ratelimit'
+import { getRec, countRecUse } from '@/lib/people'
 
 export async function POST(req: NextRequest) {
   let b: Record<string, unknown>
@@ -27,7 +28,10 @@ export async function POST(req: NextRequest) {
   if (cat && b.answers) text = composeRequest(cat.title, undefined, cat.slug, b.answers as Record<string, unknown>, String(b.note ?? '').trim().slice(0, 1200))
   if (!name || !text) return NextResponse.json({ ok: false, error: 'empty' }, { status: 400 })
   const acct = await ensureAccount(req.headers.get('user-agent') ?? '')
-  const c = await createConv(p.id, name, phone, text, acct.acctId, { cat: cat?.slug })
+  const rec = b.rec ? await getRec(String(b.rec)) : null
+  const goodRec = rec && rec.partnerId === p.id && rec.acctId !== acct.acctId ? rec : null
+  const c = await createConv(p.id, name, phone, text, acct.acctId, { cat: cat?.slug, private: b.private === true, recBy: goodRec?.acctId, recName: goodRec?.name })
+  if (goodRec) await countRecUse(goodRec)
   await attachConv(acct.acctId, c.id)
   await notifyClientMessage(c, text, true)
   return NextResponse.json({ ok: true, id: c.id })

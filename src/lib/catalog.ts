@@ -35,6 +35,8 @@ export const CATEGORIES: Category[] = [
     blurb: 'Расчистка участка и подъездов от снега, чистка кровли от снега и наледи.' },
   { slug: 'uborka-uchastka', kind: 'uslugi', hot: true, title: 'Уборка и расчистка участка', h1: 'Уборка и расчистка участка', lead: 200,
     blurb: 'Расчистка заросшего участка, вывоз веток и листвы, уборка территории после зимы или стройки.' },
+  { slug: 'pomosch-sosedu', kind: 'uslugi', title: 'Помощь по соседству', h1: 'Помощь по соседству: любые поручения', lead: 0,
+    blurb: 'Привезти или забрать, помочь по дому и на участке, отвезти человека: поручения, которые готов выполнить сосед или обычный человек рядом.' },
   { slug: 'spil-derevev', kind: 'uslugi', hot: true, title: 'Спил деревьев', h1: 'Спил и удаление деревьев', lead: 300,
     blurb: 'Спил и удаление деревьев, обрезка веток, вывоз и распил на дрова.' },
 ]
@@ -65,7 +67,7 @@ export const catHref = (c: Category, citySlug?: string) =>
 
 export const ICON: Record<string, string> = {
   'stroyat-i-prodayut': '🏘️', 'pod-zakaz': '🏗️', 'gotovye-doma': '🏡', zabor: '🧱', krovlya: '🏠', garazh: '🚗',
-  'parkovka-plitka': '🅿️', 'pokos-travy': '🌿', 'vyvoz-musora': '🚛', 'otkachka-septika': '🚰', 'uborka-snega': '❄️', 'uborka-uchastka': '🧹', 'spil-derevev': '🪓',
+  'parkovka-plitka': '🅿️', 'pokos-travy': '🌿', 'vyvoz-musora': '🚛', 'otkachka-septika': '🚰', 'uborka-snega': '❄️', 'uborka-uchastka': '🧹', 'spil-derevev': '🪓', 'pomosch-sosedu': '🤝',
 }
 
 // Услуги внутри раздела: сначала быстрые ходовые, потом остальные

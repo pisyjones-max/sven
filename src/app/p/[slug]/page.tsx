@@ -10,6 +10,8 @@ import { AdBanner } from '@/components/AdBanner'
 import { Stars } from '@/components/Stars'
 import { ClaimForm } from '@/components/ClaimForm'
 import { MyLevel } from '@/components/MyLevel'
+import { RecBanner } from '@/components/RecBanner'
+import { isHelper, recsFor } from '@/lib/people'
 import { TrustBadges } from '@/components/TrustBadges'
 import { formatPhone } from '@/lib/phone'
 import { SITE_URL } from '@/lib/site'
@@ -40,6 +42,7 @@ export default async function PartnerPage({ params }: P) {
   const live = isLive(p)
   const rating = avgRating(p)
   const reviews = await listReviews(p.id)
+  const recN = new Set((await recsFor(p.id)).map(r => r.acctId)).size
   const isBuilder = cats.some(c => c.kind === 'zastroyshchiki')
   return (
     <>
@@ -52,7 +55,10 @@ export default async function PartnerPage({ params }: P) {
           <p className="muted">
             {city?.name}{p.since ? ` · работаем с ${p.since} года` : ''}{p.price ? ` · ${p.price}` : ''}
           </p>
+          {isHelper(p) && <p><span className="chip on">🤝 Сосед-помощник</span></p>}
+          <RecBanner slug={p.slug} />
           <TrustBadges p={p} />
+          {recN > 0 && <p className="muted">🤝 Рекомендуют: {recN} {recN === 1 ? 'человек' : recN < 5 ? 'человека' : 'человек'} из тех, кто с ними работал</p>}
           {rating !== null && <p><Stars value={rating} count={p.rCount} /></p>}
           {p.desc && <p className="lead-text">{p.desc}</p>}
           <p className="tags">{cats.map(c => <Link key={c.slug} href={catHref(c)}><i>{c.title}</i></Link>)}</p>

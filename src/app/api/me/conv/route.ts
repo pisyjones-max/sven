@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const s = await currentSession()
   const slug = req.nextUrl.searchParams.get('slug') ?? ''
   if (!s || !slug) return NextResponse.json({ ok: true, id: null })
-  for (const c of (await accountConvs(s.acctId)).sort((a, b) => b.createdAt - a.createdAt)) {
+  for (const c of (await accountConvs(s.acctId)).filter(x => !(s.role === 'guest' && x.private)).sort((a, b) => b.createdAt - a.createdAt)) {
     const p = await getPartner(c.partnerId)
     if (p?.slug === slug) return NextResponse.json({ ok: true, id: c.id })
   }
