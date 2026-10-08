@@ -24,7 +24,7 @@ async function run(req: NextRequest) {
 
   for (const c of real) {
     const age = now - c.createdAt
-    if (c.accepted || c.complaint || c.remindedAt || age < LOST_AFTER || age > 48 * HOUR) continue
+    if (c.accepted || c.complaint || c.handedTo || c.remindedAt || age < LOST_AFTER || age > 48 * HOUR) continue
     const fresh = await getConv(c.id) // могли ответить между чтением списка и сейчас
     if (!fresh || fresh.accepted || fresh.remindedAt) continue
     const p = await getPartner(fresh.partnerId)

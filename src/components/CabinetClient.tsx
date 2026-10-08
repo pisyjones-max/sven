@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from 'react'
 
 interface Msg { from: 'client' | 'partner'; text: string; at: number }
 interface Level { done: number; percent: number; next: { orders: number; percent: number; left: number } | null }
-interface Conv { complaint: boolean; id: string; clientName: string; clientPhone: string | null; accepted: boolean; createdAt: number; msgs: Msg[]; done: number; level: Level | null }
+interface Conv { handedTo?: { name: string } | null; complaint: boolean; id: string; clientName: string; clientPhone: string | null; accepted: boolean; createdAt: number; msgs: Msg[]; done: number; level: Level | null }
 interface Tier { orders: number; percent: number }
 interface Billing { balance: number; prices: { title: string; lead: number }[]; ledger: { at: number; delta: number; reason: string }[]; contact: string }
 interface RecRow { name: string; comment: string; at: number; uses: number }
-interface Data { recs?: RecRow[]; partner: { name: string; slug: string; leads: number; tgBound: boolean; tiers: Tier[] | null }; billing: Billing | null; convs: Conv[] }
+interface Data { available?: { until: number; note?: string } | null; recs?: RecRow[]; partner: { name: string; slug: string; leads: number; tgBound: boolean; tiers: Tier[] | null }; billing: Billing | null; convs: Conv[] }
 
 const PRESET_TITLES: Record<string, string> = { soft: 'Мягкая: 3% и 5%', standard: 'Стандарт: от 3% до 10%', generous: 'Щедрая: от 5% до 15%' }
 
@@ -27,6 +27,52 @@ function LoyaltyBox({ token, tiers, onChanged }: { token: string; tiers: Tier[] 
         {Object.entries(PRESET_TITLES).map(([k, t]) => <button key={k} type="button" className="chip" onClick={() => set({ preset: k })}>{t}</button>)}
         {tiers && <button type="button" className="chip" onClick={() => set({ off: true })}>Выключить</button>}
       </div>
+    </div>
+  )
+}
+
+function AvailableBox({ token, cur, onChanged }: { token: string; cur: { until: number; note?: string } | null; onChanged: () => void }) {
+  const [note, setNote] = useState('')
+  async function set(body: Record<string, unknown>) {
+    await fetch('/api/cabinet/available', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }) }).catch(() => {})
+    onChanged()
+  }
+  return (
+    <div className="card">
+      <h2>{cur ? '🟢 Вы свободны' : 'Готов помочь сейчас'}</h2>
+      {cur
+        ? <p className="small">До {new Date(cur.until).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}{cur.note ? `: ${cur.note}` : ''}. Новые заявки в вашем районе приходят вам первым, на странице стоит отметка.</p>
+        : <p className="muted small">Нажмите, когда свободны: заявки в вашем районе придут вам первым, на странице появится отметка «Свободен сейчас».</p>}
+      <input placeholder="Коротко: например, с машиной, до 20 км" value={note} maxLength={120} onChange={e => setNote(e.target.value)} />
+      <div className="row">
+        {[2, 4, 8].map(h => <button key={h} className="btn sm" onClick={() => set({ hours: h, note })}>{h} ч</button>)}
+        {cur && <button className="btn ghost sm" onClick={() => set({ off: true })}>Выключить</button>}
+      </div>
+    </div>
+  )
+}
+
+function HandoffBox({ token, id, onDone }: { token: string; id: string; onDone: () => void }) {
+  const [list, setList] = useState<{ id: string; name: string; free: boolean }[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  async function openList() {
+    const j = await fetch(`/api/cabinet/handoff?token=${encodeURIComponent(token)}&id=${encodeURIComponent(id)}`).then(r => r.json()).catch(() => null)
+    setList(j?.ok ? j.list : [])
+  }
+  async function send(toId: string, name: string) {
+    if (!window.confirm(`Передать этот заказ: ${name}? Клиент увидит, кому вы его передали.`)) return
+    setBusy(true)
+    await fetch('/api/cabinet/handoff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, id, toId }) }).catch(() => {})
+    setBusy(false)
+    onDone()
+  }
+  if (!list) return <button className="link small" onClick={openList}>🔁 Передать другому</button>
+  return (
+    <div className="card">
+      <p className="label">Кому передать (та же услуга)</p>
+      {list.length === 0 && <p className="muted small">Пока нет подходящих компаний.</p>}
+      {list.map(x => <button key={x.id} className="conv" disabled={busy} onClick={() => send(x.id, x.name)}>{x.free ? '🟢 ' : ''}<b>{x.name}</b></button>)}
+      <button className="link small" onClick={() => setList(null)}>Отмена</button>
     </div>
   )
 }
@@ -106,6 +152,7 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
           <p className="muted small">Эти люди вас советуют знакомым. Ответьте им быстро и по-честному: так о вас узнают новые клиенты.</p>
         </div>
       )}
+      <AvailableBox token={token} cur={data.available ?? null} onChanged={load} />
       {data.billing && <BalanceBox b={data.billing} />}
       <LoyaltyBox token={token} tiers={data.partner.tiers} onChanged={load} />
       {cur ? (
@@ -113,6 +160,7 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
           <button className="link" onClick={() => setOpen(null)}>← Все заявки</button>
           <h3>{cur.clientName} {cur.clientPhone ? `· +${cur.clientPhone}` : '· контакт откроется после вашего ответа'}</h3>
           {cur.done > 0 && <p className="notice ok small">Постоянный клиент: выполнено заказов {cur.done}{cur.level && cur.level.percent > 0 ? `, скидка ${cur.level.percent}%` : ''}</p>}
+          {cur.handedTo && <p className="notice ok small">🔁 Заказ передан: {cur.handedTo.name}</p>}
           {cur.complaint
             ? <p className="notice bad small">Жалоба отправлена, заявка не засчитана.</p>
             : <button className="link small" onClick={complain}>🚩 Не по теме / спам</button>}
@@ -122,6 +170,7 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
               <button className="btn ghost sm" onClick={markDone}>Работа выполнена</button>
             </div>
           )}
+          {!cur.handedTo && !cur.complaint && <HandoffBox token={token} id={cur.id} onDone={() => { setOpen(null); load() }} />}
           <div className="msgs">
             {cur.msgs.map((m, i) => <div key={i} className={`msg ${m.from === 'partner' ? 'client' : 'partner'}`}>{m.text}</div>)}
           </div>

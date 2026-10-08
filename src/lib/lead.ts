@@ -14,7 +14,10 @@ export async function dispatchLead(i: { cat: Category; city?: City; name: string
   const all = (await listPartners()).filter(p => !p.system && p.cats.includes(i.cat.slug) && isLive(p) && canPay(p, i.cat.lead))
   const local = i.city && i.city.slug !== 'podmoskove' ? all.filter(p => p.city === i.city!.slug || p.city === 'podmoskove') : all
   // Раздаём по очереди: у кого меньше принятых лидов, тот первым
-  const chosen = (local.length ? local : all).sort((a, z) => a.leads - z.leads || a.createdAt - z.createdAt).slice(0, MAX_COMPANIES)
+  // Кто отметил «Готов помочь сейчас», тот первым; дальше у кого меньше принятых лидов
+  const now = Date.now()
+  const free = (p: { available?: { until: number } }) => ((p.available?.until ?? 0) > now ? 1 : 0)
+  const chosen = (local.length ? local : all).sort((a, z) => free(z) - free(a) || a.leads - z.leads || a.createdAt - z.createdAt).slice(0, MAX_COMPANIES)
 
   const reqId = randomBytes(5).toString('hex')
   const sent: { slug: string; name: string; convId: string }[] = []

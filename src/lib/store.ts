@@ -34,6 +34,7 @@ export interface Partner {
   respSum?: number // сумма времени до первого ответа, мс
   respCount?: number
   system?: boolean // служебный «Диспетчер»: общий чат платформы, не показывается в каталоге
+  available?: { until: number; note?: string } // «Готов помочь сейчас» до указанного времени
   balance?: number // баланс для платных лидов, ₽ (пусто = ещё не инициализирован)
   src?: string // откуда пришла регистрация (плакат, мастер, партнёр)
 }
@@ -61,6 +62,8 @@ export interface Conv {
   private?: boolean // приватный заказ: подключённые близкие его не видят
   recBy?: string // кабинет, который порекомендовал эту компанию
   recName?: string // имя рекомендателя (для компании)
+  handedTo?: { partnerId: string; name: string; at: number } // заказ передан другой компании
+  handedFrom?: string // название компании, которая передала этот заказ
 }
 
 const rid = (n = 8) => randomBytes(n).toString('hex')
@@ -148,8 +151,8 @@ export async function listPartners(): Promise<Partner[]> {
 export const getConv = (id: string) => kvGet<Conv>(`conv:${id}`)
 export const saveConv = (c: Conv) => kvSet(`conv:${c.id}`, c)
 
-export async function createConv(partnerId: string, clientName: string, clientPhone: string, text: string, acctId?: string, meta?: { cat?: string; reqId?: string; private?: boolean; recBy?: string; recName?: string }): Promise<Conv> {
-  const c: Conv = { id: rid(8), partnerId, clientName, clientPhone, accepted: false, createdAt: Date.now(), msgs: [{ from: 'client', text, at: Date.now() }], acctId, cat: meta?.cat, reqId: meta?.reqId, private: meta?.private || undefined, recBy: meta?.recBy, recName: meta?.recName }
+export async function createConv(partnerId: string, clientName: string, clientPhone: string, text: string, acctId?: string, meta?: { cat?: string; reqId?: string; private?: boolean; recBy?: string; recName?: string; handedFrom?: string }): Promise<Conv> {
+  const c: Conv = { id: rid(8), partnerId, clientName, clientPhone, accepted: false, createdAt: Date.now(), msgs: [{ from: 'client', text, at: Date.now() }], acctId, cat: meta?.cat, reqId: meta?.reqId, private: meta?.private || undefined, recBy: meta?.recBy, recName: meta?.recName, handedFrom: meta?.handedFrom }
   await saveConv(c)
   const ids = (await kvGet<string[]>(`pconv:${partnerId}`)) ?? []
   await kvSet(`pconv:${partnerId}`, [c.id, ...ids].slice(0, 300))
@@ -190,6 +193,7 @@ export function partnerView(c: Conv) {
     clientPhone: c.accepted ? c.clientPhone : null,
     accepted: c.accepted,
     complaint: !!c.complaint,
+    handedTo: c.handedTo ? { name: c.handedTo.name } : null,
     createdAt: c.createdAt,
     msgs: c.msgs.map(m => (m.from === 'client' && !c.accepted ? { ...m, text: maskContacts(m.text) } : m)),
   }

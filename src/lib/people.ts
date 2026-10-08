@@ -3,6 +3,7 @@ import { kvGet, kvSet } from './kv'
 import { Conv } from './store'
 
 // «Мои люди»: личные отметки кабинета о компаниях и людях, и рекомендации. Публичной оценки-цифры здесь нет.
+export const isAvailable = (p: { available?: { until: number } }) => (p.available?.until ?? 0) > Date.now()
 export const HELPER_CAT = 'pomosch-sosedu'
 // Сосед-помощник: человек, который помогает по-соседски, а не компания
 export const isHelper = (p: { cats: string[] }) => p.cats.length === 1 && p.cats[0] === HELPER_CAT

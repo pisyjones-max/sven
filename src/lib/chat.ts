@@ -15,7 +15,7 @@ export async function notifyClientMessage(c: Conv, text: string, first: boolean)
     const lastMasked = view.msgs[view.msgs.length - 1].text
     const lv = await loyaltyFor(p, c)
     const gift = lv && lv.done > 0 ? `\n🎁 Постоянный клиент: выполнено ${lv.done}, скидка ${lv.percent}%` : ''
-    const rec = first && c.recName ? `\n🤝 Пришёл по рекомендации: ${c.recName}` : ''
+    const rec = first && c.recName ? `\n🤝 Пришёл по рекомендации: ${c.recName}` : first && c.handedFrom ? `\n🔁 Заказ передал(а): ${c.handedFrom}` : ''
     const head = (first ? `🏠 Новая заявка от ${c.clientName}` : `💬 ${c.clientName} пишет`) + gift + rec
     const id = await tgSend(p.tgChatId, `${head}\n\n${lastMasked}\n\n↩️ Нажмите «Ответить» на это сообщение, чтобы написать клиенту. Контакт откроется после вашего первого ответа.`)
     if (id) await rememberTgMsg(p.tgChatId, id, c.id)
@@ -49,7 +49,7 @@ export async function partnerReply(c: Conv, p: Partner, text: string): Promise<'
 }
 
 // Компания ответила → сообщить клиенту и всем, кто подключил Telegram или MAX к его кабинету
-async function notifyClientReply(c: Conv, p: Partner, text: string) {
+export async function notifyClientReply(c: Conv, p: Partner, text: string) {
   if (!c.acctId || c.private) return // приватный заказ: не рассылаем в мессенджеры, подключённые к общему кабинету
   const a = await getAccount(c.acctId)
   const body = `💬 ${p.name}:\n${text}\n\nЧтобы ответить, нажмите «Ответить» на это сообщение. Чат также на сайте: ${SITE_URL}/p/${p.slug}`

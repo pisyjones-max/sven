@@ -11,7 +11,7 @@ import { Stars } from '@/components/Stars'
 import { ClaimForm } from '@/components/ClaimForm'
 import { MyLevel } from '@/components/MyLevel'
 import { RecBanner } from '@/components/RecBanner'
-import { isHelper, recsFor } from '@/lib/people'
+import { isAvailable, isHelper, recsFor } from '@/lib/people'
 import { TrustBadges } from '@/components/TrustBadges'
 import { formatPhone } from '@/lib/phone'
 import { SITE_URL } from '@/lib/site'
@@ -55,6 +55,7 @@ export default async function PartnerPage({ params }: P) {
           <p className="muted">
             {city?.name}{p.since ? ` · работаем с ${p.since} года` : ''}{p.price ? ` · ${p.price}` : ''}
           </p>
+          {isAvailable(p) && <p><span className="chip on">🟢 Свободен сейчас{p.available?.note ? `: ${p.available.note}` : ''}</span></p>}
           {isHelper(p) && <p><span className="chip on">🤝 Сосед-помощник</span></p>}
           <RecBanner slug={p.slug} />
           <TrustBadges p={p} />
