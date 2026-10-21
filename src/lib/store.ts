@@ -4,6 +4,7 @@ import { maskContacts } from './mask'
 import { DEMO_PARTNERS } from './demo'
 import { ADMIN_CHAT } from './tg'
 import type { Tier } from './loyalty'
+import type { ExtInfo } from './yandex-card'
 
 export interface Partner {
   id: string
@@ -37,6 +38,7 @@ export interface Partner {
   available?: { until: number; note?: string } // «Готов помочь сейчас» до указанного времени
   balance?: number // баланс для платных лидов, ₽ (пусто = ещё не инициализирован)
   src?: string // откуда пришла регистрация (плакат, мастер, партнёр)
+  ext?: ExtInfo // данные из внешней базы (парсер): рейтинг источника, специализации, ссылка на профиль
 }
 
 export interface Msg { from: 'client' | 'partner'; text: string; at: number }
@@ -66,7 +68,7 @@ export interface Conv {
   handedFrom?: string // название компании, которая передала этот заказ
 }
 
-const rid = (n = 8) => randomBytes(n).toString('hex')
+export const rid = (n = 8) => randomBytes(n).toString('hex')
 
 const TR: Record<string, string> = {
   а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm',

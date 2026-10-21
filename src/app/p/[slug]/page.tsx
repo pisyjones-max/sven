@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: P): Promise<Metadata> {
     title: `${p.name}: ${cats}`,
     description: p.desc ? p.desc.slice(0, 160) : `${p.name}, ${getCity(p.city)?.name}. ${cats}. Напишите в чат на странице.`,
     alternates: { canonical: `/p/${p.slug}` },
-    robots: p.demo ? { index: false, follow: false } : undefined,
+    robots: p.demo || (p.ext && !p.claimed) ? { index: false, follow: false } : undefined,
   }
 }
 
@@ -55,6 +55,7 @@ export default async function PartnerPage({ params }: P) {
           <p className="muted">
             {city?.name}{p.since ? ` · работаем с ${p.since} года` : ''}{p.price ? ` · ${p.price}` : ''}
           </p>
+          {p.ext && <p className="muted small">{p.ext.accountType === 'org' ? 'Компания' : 'Частный исполнитель'}{p.ext.reviews ? ` · на Яндекс Услугах: ★ ${p.ext.rating ?? '—'}, отзывов ${p.ext.reviews}` : ''}</p>}
           {isAvailable(p) && <p><span className="chip on">🟢 Свободен сейчас{p.available?.note ? `: ${p.available.note}` : ''}</span></p>}
           {isHelper(p) && <p><span className="chip on">🤝 Сосед-помощник</span></p>}
           <RecBanner slug={p.slug} />
@@ -63,6 +64,7 @@ export default async function PartnerPage({ params }: P) {
           {rating !== null && <p><Stars value={rating} count={p.rCount} /></p>}
           {p.desc && <p className="lead-text">{p.desc}</p>}
           <p className="tags">{cats.map(c => <Link key={c.slug} href={catHref(c)}><i>{c.title}</i></Link>)}</p>
+          {p.ext?.specs && <p className="tags">{p.ext.specs.slice(0, 12).map(sp => <i key={sp}>{sp}</i>)}</p>}
 
           {p.loyalty && (
             <div className="card loy-card">
@@ -120,7 +122,7 @@ export default async function PartnerPage({ params }: P) {
               <h3>Контакты</h3>
               {p.phone && <a className="btn big" href={`tel:+${p.phone}`}>Позвонить {formatPhone('+' + p.phone)}</a>}
               {p.source && <a className="btn ghost big" href={p.source.url} target="_blank" rel="nofollow sponsored noopener">Подробнее на {p.source.name} →</a>}
-              <p className="muted small">Компания добавлена из открытого источника и пока не подключена к чату на платформе.</p>
+              <p className="muted small">{p.ext && p.ext.accountType !== 'org' ? 'Исполнитель добавлен' : 'Компания добавлена'} из открытого источника и пока не подключен{p.ext && p.ext.accountType !== 'org' ? '' : 'а'} к чату на платформе.</p>
               <ClaimForm slug={p.slug} />
             </div>
           )}

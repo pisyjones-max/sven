@@ -5,7 +5,7 @@ import { listPartners, listRecentConvs } from '@/lib/store'
 import { kvGet, kvScanKeys } from '@/lib/kv'
 import { dailyStats, lostRequests, partnerStats, realConvs } from '@/lib/stats'
 import { balanceOf, billingOn } from '@/lib/billing'
-import { BalanceTool, CsvImport } from '@/components/AdminTools'
+import { BalanceTool, CsvImport, ParserImport } from '@/components/AdminTools'
 
 export const metadata: Metadata = { title: 'Админка', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
@@ -53,6 +53,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <p className="small">Откуда регистрации: {[...bySrc.entries()].map(([k, v]) => `${k}: ${v}`).join(' · ') || 'пока нет'} · Всего компаний: {real_partners.length} · С Telegram: {real_partners.filter(p => p.tgChatId).length}</p>
       <p className="small"><Link href="/master/poster">Плакат с QR</Link> · <Link href="/master/memo">Памятка для разговора</Link> · <Link href="/master">Страница для мастеров</Link></p>
       <CsvImport adminKey={key ?? ''} />
+      <ParserImport adminKey={key ?? ''} />
       {billingOn() && <BalanceTool adminKey={key ?? ''} partners={real_partners.map(p => ({ slug: p.slug, name: p.name, balance: balanceOf(p) }))} />}
       <h2>Копия базы</h2>
       <p className="small">{bfiles.length ? `Последняя: ${fmt(bfiles[0].t)}, всего копий: ${bfiles.length}` : 'Копий пока нет (cron ставится при обновлении: bash deploy/update.sh)'}</p>

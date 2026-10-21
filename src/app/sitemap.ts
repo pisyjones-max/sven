@@ -15,6 +15,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...Object.values(KIND_LABEL).map(k => u(`/${k.path}`, 0.9)),
     ...CATEGORIES.map(c => u(catHref(c), 0.8)),
     ...CATEGORIES.flatMap(c => CITIES.map(ct => u(catHref(c, ct.slug), 0.6))),
-    ...partners.filter(p => !p.demo).map(p => u(`/p/${p.slug}`, 0.5)),
+    ...partners.filter(p => !p.demo && !(p.ext && !p.claimed)).map(p => u(`/p/${p.slug}`, 0.5)),
   ]
 }
