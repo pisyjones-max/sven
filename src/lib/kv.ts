@@ -19,8 +19,13 @@ function loadMem(): Map<string, string> {
   return m
 }
 
+let deferPersist = false // массовый импорт: пишем файл раз в пачку, а не после каждой записи
+export function kvDeferPersist(on: boolean) { deferPersist = on }
+export function kvFlush() { const d = deferPersist; deferPersist = false; persist(mem); deferPersist = d }
+export const kvIsFileBackend = () => !isKvConfigured() && !!DATA_FILE
+
 function persist(m: Map<string, string>) {
-  if (!DATA_FILE) return
+  if (!DATA_FILE || deferPersist) return
   try {
     mkdirSync(dirname(DATA_FILE), { recursive: true })
     const tmp = `${DATA_FILE}.tmp`
