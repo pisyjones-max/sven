@@ -196,6 +196,8 @@ export function partnerView(c: Conv) {
     accepted: c.accepted,
     complaint: !!c.complaint,
     handedTo: c.handedTo ? { name: c.handedTo.name } : null,
+    finished: !!c.done?.length,
+    cat: c.cat ?? null,
     createdAt: c.createdAt,
     msgs: c.msgs.map(m => (m.from === 'client' && !c.accepted ? { ...m, text: maskContacts(m.text) } : m)),
   }

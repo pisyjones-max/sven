@@ -1,10 +1,12 @@
 'use client'
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { convBucket, BUCKET_TITLE, type Bucket } from '@/lib/convstatus'
+import { getCategory } from '@/lib/catalog'
 
 interface Msg { from: 'client' | 'partner'; text: string; at: number }
 interface Level { done: number; percent: number; next: { orders: number; percent: number; left: number } | null }
-interface Conv { handedTo?: { name: string } | null; complaint: boolean; id: string; clientName: string; clientPhone: string | null; accepted: boolean; createdAt: number; msgs: Msg[]; done: number; level: Level | null }
+interface Conv { handedTo?: { name: string } | null; finished?: boolean; cat?: string | null; complaint: boolean; id: string; clientName: string; clientPhone: string | null; accepted: boolean; createdAt: number; msgs: Msg[]; done: number; level: Level | null }
 interface Tier { orders: number; percent: number }
 interface Billing { balance: number; prices: { title: string; lead: number }[]; ledger: { at: number; delta: number; reason: string }[]; contact: string }
 interface RecRow { name: string; comment: string; at: number; uses: number }
@@ -95,13 +97,24 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
   const [open, setOpen] = useState<string | null>(null)
   const [text, setText] = useState('')
   const [amount, setAmount] = useState('')
+  const [tab, setTab] = useState<Bucket>('new')
+  const seenNew = useRef<number | null>(null)
 
   const load = useCallback(async () => {
     try {
       const r = await fetch(`/api/cabinet?token=${token}`, { cache: 'no-store' })
       if (r.status === 404) { setBad(true); return }
       const j = await r.json()
-      if (j.ok) setData(j)
+      if (j.ok) {
+        setData(j)
+        // новая заявка: число в заголовке вкладки и короткий сигнал (звук браузер может не дать до первого клика, это нормально)
+        const n = (j.convs as Conv[]).filter(c => convBucket(c) === 'new').length
+        document.title = n ? `(${n}) Заявки` : 'Заявки'
+        if (seenNew.current !== null && n > seenNew.current) {
+          try { const a = new AudioContext(), o = a.createOscillator(); o.connect(a.destination); o.frequency.value = 880; o.start(); o.stop(a.currentTime + 0.25) } catch { /* без звука */ }
+        }
+        seenNew.current = n
+      }
     } catch { /* сеть */ }
   }, [token])
 
@@ -182,10 +195,18 @@ export function CabinetClient({ token, tgLink }: { token: string; tgLink: string
       ) : (
         <div className="card">
           <h2>Заявки</h2>
+          <div className="chips">
+            {(['new', 'work', 'closed'] as Bucket[]).map(b => {
+              const n = data.convs.filter(c => convBucket(c) === b).length
+              return <button key={b} type="button" className={`chip ${tab === b ? 'on' : ''}`} onClick={() => setTab(b)}>{BUCKET_TITLE[b]}{n ? ` · ${n}` : ''}</button>
+            })}
+          </div>
           {data.convs.length === 0 && <p className="muted">Пока пусто. Заявки появятся, когда клиенты напишут на вашей странице.</p>}
-          {data.convs.map(c => (
+          {data.convs.length > 0 && !data.convs.some(c => convBucket(c) === tab) && <p className="muted small">В этом списке пусто.</p>}
+          {data.convs.filter(c => convBucket(c) === tab).sort((a, z) => z.msgs[z.msgs.length - 1].at - a.msgs[a.msgs.length - 1].at).map(c => (
             <button key={c.id} className="conv" onClick={() => setOpen(c.id)}>
               <b>{c.clientName}</b> {c.accepted ? '✅' : '🆕'}
+              <span className="muted small"> {getCategory(c.cat ?? '')?.title ?? ''} · {new Date(c.createdAt).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
               <span className="muted"> {c.msgs[c.msgs.length - 1].text.slice(0, 70)}</span>
             </button>
           ))}

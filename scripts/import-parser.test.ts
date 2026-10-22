@@ -6,6 +6,8 @@ import { readFileSync, existsSync } from 'node:fs'
 import { importParserCards } from '../src/lib/yandex-import'
 import { mapCard } from '../src/lib/yandex-card'
 import { questionsFor, composeRequest } from '../src/lib/questions'
+import { convBucket } from '../src/lib/convstatus'
+import { smsLeadAlert } from '../src/lib/sms'
 import { listPublicPartners, getPartner } from '../src/lib/store'
 import { kvGet } from '../src/lib/kv'
 
@@ -95,4 +97,22 @@ test('большие работы не спрашивают «сегодня/з�
   assert.ok(questionsFor('otkachka-septika').find(x => x.id === 'when')!.options.includes('Сегодня'), 'срочные услуги не тронуты')
   const text = composeRequest('Гараж и навес', 'Раменское', 'garazh', { when: 'В следующем году', next: 'Выезд на замер' }, '')
   assert.match(text, /Когда планируете: В следующем году/); assert.match(text, /Выезд на замер/)
+})
+
+test('списки кабинета: новые, в работе, закрытые', () => {
+  assert.equal(convBucket({ accepted: false, complaint: false }), 'new')
+  assert.equal(convBucket({ accepted: true, complaint: false }), 'work')
+  assert.equal(convBucket({ accepted: true, complaint: false, finished: true }), 'closed')
+  assert.equal(convBucket({ accepted: false, complaint: true }), 'closed')
+  assert.equal(convBucket({ accepted: false, complaint: false, handedTo: { name: 'x' } }), 'closed')
+})
+
+test('SMS о заявке: выключено по умолчанию, не чаще раза в 10 минут, без телефона не шлём', async () => {
+  const p = { id: 'sms-p1', phone: '79990001122', token: 'tok' }
+  delete process.env.SMS_LEAD_ALERTS; process.env.SMS_DEV = '1'
+  assert.equal(await smsLeadAlert(p, 'Гараж и навес', 'https://x'), 'off')
+  process.env.SMS_LEAD_ALERTS = '1'
+  assert.equal(await smsLeadAlert({ ...p, phone: '' }, 'Гараж и навес', 'https://x'), 'no_phone')
+  assert.equal(await smsLeadAlert(p, 'Гараж и навес', 'https://x'), 'sent')
+  assert.equal(await smsLeadAlert(p, 'Гараж и навес', 'https://x'), 'throttled')
 })

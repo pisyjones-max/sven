@@ -22,6 +22,18 @@ async function sendSms(phone: string, text: string): Promise<boolean> {
   return false
 }
 
+// SMS компании о новой заявке, если у неё не подключён Telegram. Тратит деньги на SMS.ru, поэтому только при SMS_LEAD_ALERTS=1
+// и не чаще раза в 10 минут на компанию (заявки при этом всё равно ждут в кабинете).
+export async function smsLeadAlert(p: { id: string; phone: string; token: string }, catTitle: string, siteUrl: string): Promise<'sent' | 'off' | 'no_phone' | 'throttled' | 'failed'> {
+  if (process.env.SMS_LEAD_ALERTS !== '1' || !smsEnabled()) return 'off'
+  if (!/^7\d{10}$/.test(p.phone)) return 'no_phone'
+  const last = await kvGet<number>(`smslead:${p.id}`)
+  if (last && Date.now() - last < 10 * 60_000) return 'throttled'
+  await kvSet(`smslead:${p.id}`, Date.now())
+  const ok = await sendSms(p.phone, `Платформа домов: новая заявка (${catTitle}). Открыть: ${siteUrl}/cabinet/${p.token}`)
+  return ok ? 'sent' : 'failed'
+}
+
 interface CodeRec { h: string; exp: number; tries: number; sentAt: number }
 const hash = (phone: string, code: string) => createHash('sha256').update(`${phone}:${code}:${process.env.ADMIN_KEY ?? ''}`).digest('hex')
 

@@ -5,6 +5,8 @@ import { loyaltyFor } from './loyalty-server'
 import { getAccount } from './account'
 import { maxAdapter, rememberClientMsg, tgAdapter } from './channels'
 import { balanceOf, billingOn, canPay, chargeLead, leadPrice } from './billing'
+import { smsLeadAlert } from './sms'
+import { getCategory } from './catalog'
 
 // Клиент написал → уведомить партнёра (Telegram) и админа (копия, без масок)
 export async function notifyClientMessage(c: Conv, text: string, first: boolean) {
@@ -20,6 +22,8 @@ export async function notifyClientMessage(c: Conv, text: string, first: boolean)
     const id = await tgSend(p.tgChatId, `${head}\n\n${lastMasked}\n\n↩️ Нажмите «Ответить» на это сообщение, чтобы написать клиенту. Контакт откроется после вашего первого ответа.`)
     if (id) await rememberTgMsg(p.tgChatId, id, c.id)
   }
+  // нет Telegram: заявка ждёт в кабинете, а SMS (если включены) зовёт туда
+  if (first && !p.tgChatId && !p.system) await smsLeadAlert(p, getCategory(c.cat ?? '')?.title ?? 'услуга', SITE_URL).catch(() => 'failed')
   if (!p.system) await tgAdmin(`👁 [${p.name}] ${first ? 'НОВАЯ ЗАЯВКА' : 'клиент'}: ${c.clientName} ${c.clientPhone}\n${text}\n${SITE_URL}/p/${p.slug}`)
 }
 
