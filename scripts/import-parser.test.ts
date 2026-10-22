@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 import { importParserCards } from '../src/lib/yandex-import'
 import { mapCard } from '../src/lib/yandex-card'
+import { questionsFor, composeRequest } from '../src/lib/questions'
 import { listPublicPartners, getPartner } from '../src/lib/store'
 import { kvGet } from '../src/lib/kv'
 
@@ -84,4 +85,14 @@ test('реальные 37 карточек', { skip: real ? false : 'нет PARS
     assert.deepEqual(p.ext?.specs, [...new Set((c.specializations as string[]) ?? [])].slice(0, 80).length ? [...new Set(c.specializations as string[])].slice(0, 80) : undefined)
     assert.equal(p.imported, true); assert.equal(p.claimed, false); assert.equal(p.phone, '')
   }
+})
+
+test('большие работы не спрашивают «сегодня/завтра»', () => {
+  for (const c of ['garazh', 'zabor', 'krovlya', 'parkovka-plitka', 'remont-i-stroitelstvo']) {
+    const w = questionsFor(c).find(x => x.id === 'when')!
+    assert.ok(w && !w.options.includes('Сегодня') && !w.options.includes('Завтра'), c)
+  }
+  assert.ok(questionsFor('otkachka-septika').find(x => x.id === 'when')!.options.includes('Сегодня'), 'срочные услуги не тронуты')
+  const text = composeRequest('Гараж и навес', 'Раменское', 'garazh', { when: 'В следующем году', next: 'Выезд на замер' }, '')
+  assert.match(text, /Когда планируете: В следующем году/); assert.match(text, /Выезд на замер/)
 })
