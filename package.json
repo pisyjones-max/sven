@@ -9,16 +9,19 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "tsx --tsconfig tsconfig.json --test scripts/import-parser.test.ts",
-    "import:parser": "tsx --tsconfig tsconfig.json scripts/import-parser.ts"
+    "import:parser": "tsx --tsconfig tsconfig.json scripts/import-parser.ts",
+    "migrate:pg": "tsx --tsconfig tsconfig.json scripts/migrate-kv-to-pg.ts"
   },
   "dependencies": {
     "next": "16.2.9",
+    "pg": "^8.23.1",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",

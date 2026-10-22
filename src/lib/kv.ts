@@ -1,10 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { dirname } from 'path'
 
-// Хранилище по приоритету: Upstash Redis REST → файл на диске (DATA_DIR, для своего сервера) → память процесса.
+// Хранилище по приоритету: Postgres (DATABASE_URL) → Upstash Redis REST → файл на диске (DATA_DIR) → память процесса.
 const KV_URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL ?? ''
 const KV_TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN ?? ''
 
+const PG_URL = process.env.DATABASE_URL ?? ''
 const DATA_FILE = process.env.DATA_DIR ? `${process.env.DATA_DIR.replace(/\/$/, '')}/kv.json` : ''
 
 function loadMem(): Map<string, string> {
@@ -22,7 +23,8 @@ function loadMem(): Map<string, string> {
 let deferPersist = false // массовый импорт: пишем файл раз в пачку, а не после каждой записи
 export function kvDeferPersist(on: boolean) { deferPersist = on }
 export function kvFlush() { const d = deferPersist; deferPersist = false; persist(mem); deferPersist = d }
-export const kvIsFileBackend = () => !isKvConfigured() && !!DATA_FILE
+export const kvIsFileBackend = () => !PG_URL && !isKvConfigured() && !!DATA_FILE
+export const kvIsPostgres = () => !!PG_URL
 
 function persist(m: Map<string, string>) {
   if (!DATA_FILE || deferPersist) return
@@ -53,8 +55,26 @@ async function kvFetch(path: string): Promise<{ result?: unknown }> {
   return res.json()
 }
 
+// --- Postgres: одна таблица kv (ключ → jsonb). Без полной перезаписи файла на каждую запись, с настоящим поиском по ключам.
+type PgPool = { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>; end: () => Promise<void> }
+const gp = globalThis as typeof globalThis & { __kvpg?: Promise<PgPool> }
+export function pgPool(): Promise<PgPool> {
+  return (gp.__kvpg ??= (async () => {
+    const { Pool } = await import('pg')
+    const pool = new Pool({ connectionString: PG_URL, max: 5, connectionTimeoutMillis: 8000 }) as unknown as PgPool
+    await pool.query('CREATE TABLE IF NOT EXISTS kv (key text PRIMARY KEY, value jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())')
+    await pool.query('CREATE INDEX IF NOT EXISTS kv_key_prefix ON kv (key text_pattern_ops)')
+    return pool
+  })())
+}
+const likeOf = (pattern: string) => pattern.replace(/[\\%_]/g, '\\$&').replace(/\*/g, '%')
+
 export async function kvSet(key: string, value: unknown): Promise<void> {
   const json = JSON.stringify(value)
+  if (PG_URL) {
+    await (await pgPool()).query('INSERT INTO kv (key, value) VALUES ($1, $2::jsonb) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()', [key, json])
+    return
+  }
   if (!isKvConfigured()) { mem.set(key, json); persist(mem); return }
   // Тело через POST: ссылки длиннее лимита URL ломали бы запись переписки
   const res = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}`, {
@@ -67,6 +87,10 @@ export async function kvSet(key: string, value: unknown): Promise<void> {
 }
 
 export async function kvGet<T>(key: string): Promise<T | null> {
+  if (PG_URL) {
+    const r = await (await pgPool()).query('SELECT value FROM kv WHERE key = $1', [key])
+    return r.rows.length ? (r.rows[0].value as T) : null
+  }
   let raw: unknown
   if (!isKvConfigured()) raw = mem.get(key) ?? null
   else raw = (await kvFetch(`/get/${encodeURIComponent(key)}`)).result ?? null
@@ -79,6 +103,7 @@ export async function kvGet<T>(key: string): Promise<T | null> {
 }
 
 export async function kvScanKeys(pattern: string): Promise<string[]> {
+  if (PG_URL) return (await (await pgPool()).query("SELECT key FROM kv WHERE key LIKE $1 ESCAPE '\\'", [likeOf(pattern)])).rows.map(r => String(r.key))
   if (!isKvConfigured()) {
     const re = new RegExp('^' + pattern.split('*').map(s => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$')
     return [...mem.keys()].filter(k => re.test(k))

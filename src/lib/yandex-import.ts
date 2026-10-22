@@ -10,8 +10,13 @@ export const MAX_CARDS_PER_REQUEST = 300
 
 const SOURCE_NAMES: Record<string, string> = { yandex_uslugi: 'Яндекс Услугах' }
 
+// Порядок ключей не важен: Postgres (jsonb) хранит их по-своему, а сравнивать надо содержимое
+const canon = (v: unknown): unknown => Array.isArray(v) ? v.map(canon)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, x]) => x !== undefined).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, x]) => [k, canon(x)]))
+  : v
+
 // Что именно из карточки платформа считает «данными исполнителя» (для определения «без изменений»)
-const snapshot = (p: Partner) => JSON.stringify({ n: p.name, d: p.desc, c: [...p.cats].sort(), s: p.source, e: { ...p.ext, seenAt: undefined } })
+const snapshot = (p: Partner) => JSON.stringify(canon({ n: p.name, d: p.desc, c: [...p.cats].sort(), s: p.source, e: { ...p.ext, seenAt: undefined } }))
 
 async function upsert(c: MappedCard, apply: boolean, seen: Set<string>): Promise<{ status: RowStatus; note?: string; slug?: string }> {
   const notes = [...c.warnings]
