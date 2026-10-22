@@ -102,6 +102,12 @@ export async function kvGet<T>(key: string): Promise<T | null> {
   }
 }
 
+export async function kvDel(key: string): Promise<void> {
+  if (PG_URL) { await (await pgPool()).query('DELETE FROM kv WHERE key = $1', [key]); return }
+  if (!isKvConfigured()) { mem.delete(key); persist(mem); return }
+  await kvFetch(`/del/${encodeURIComponent(key)}`)
+}
+
 export async function kvScanKeys(pattern: string): Promise<string[]> {
   if (PG_URL) return (await (await pgPool()).query("SELECT key FROM kv WHERE key LIKE $1 ESCAPE '\\'", [likeOf(pattern)])).rows.map(r => String(r.key))
   if (!isKvConfigured()) {

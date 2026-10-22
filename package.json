@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --tsconfig tsconfig.json --test scripts/import-parser.test.ts",
     "import:parser": "tsx --tsconfig tsconfig.json scripts/import-parser.ts",
-    "migrate:pg": "tsx --tsconfig tsconfig.json scripts/migrate-kv-to-pg.ts"
+    "migrate:pg": "tsx --tsconfig tsconfig.json scripts/migrate-kv-to-pg.ts",
+    "partners": "tsx --tsconfig tsconfig.json scripts/partners.ts"
   },
   "dependencies": {
     "next": "16.2.9",
