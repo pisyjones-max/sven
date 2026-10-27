@@ -116,3 +116,10 @@ test('SMS о заявке: выключено по умолчанию, не ча
   assert.equal(await smsLeadAlert(p, 'Гараж и навес', 'https://x'), 'sent')
   assert.equal(await smsLeadAlert(p, 'Гараж и навес', 'https://x'), 'throttled')
 })
+
+test('организация из справочника: пустое name, название берём из raw.personalInfo', () => {
+  const m = mapCard(card({ name: '', first_name: null, last_name: null, account_type: 'org', raw: { personalInfo: { firstName: 'Воскресенский', lastName: 'бетонный завод' } } }))
+  assert.ok(m.ok); if (m.ok) assert.equal(m.card.name, 'Воскресенский бетонный завод')
+  const none = mapCard(card({ name: '', first_name: null, last_name: null, raw: { personalInfo: {} } }))
+  assert.equal(none.ok, false, 'если названия нигде нет, карточка честно идёт в ошибки')
+})

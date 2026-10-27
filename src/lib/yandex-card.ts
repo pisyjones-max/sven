@@ -84,7 +84,13 @@ export function mapCard(raw: unknown): MapResult {
   if (!isObj(raw)) return { ok: false, kind: 'invalid', error: 'запись не объект' }
   const k = sourceKey(raw)
   const first = str(raw.first_name, 60), last = str(raw.last_name, 60)
-  const name = (str(raw.name, 120) ?? [first, last].filter(Boolean).join(' ')) || undefined
+  // у организаций из справочника верхнее name пустое: название лежит в raw.personalInfo
+  const pi = isObj(raw.raw) && isObj(raw.raw.personalInfo) ? raw.raw.personalInfo : undefined
+  const fromPi = pi
+    ? str(pi.name, 120) ?? str(pi.fullName, 120) ?? str(pi.displayName, 120) ?? str(pi.title, 120) ?? str(pi.companyName, 120) ?? str(pi.organizationName, 120)
+      ?? ([str(pi.firstName, 60), str(pi.middleName, 60), str(pi.lastName, 60)].filter(Boolean).join(' ') || undefined)
+    : undefined
+  const name = (str(raw.name, 120) ?? [first, last].filter(Boolean).join(' ')) || fromPi
   if (!k) return { ok: false, kind: 'invalid', error: 'нет source или идентификатора (ydo_worker_id / worker_id / id)', name }
   if (!name) return { ok: false, kind: 'invalid', error: 'нет имени', id: k.id }
   const warnings: string[] = []

@@ -55,7 +55,7 @@ export default async function PartnerPage({ params }: P) {
           <p className="muted">
             {city?.name}{p.since ? ` · работаем с ${p.since} года` : ''}{p.price ? ` · ${p.price}` : ''}
           </p>
-          {p.ext && <p className="muted small">{p.ext.accountType === 'org' ? 'Компания' : 'Частный исполнитель'}{p.ext.reviews ? ` · на Яндекс Услугах: ★ ${p.ext.rating ?? '—'}, отзывов ${p.ext.reviews}` : ''}</p>}
+          {p.ext && <p className="muted small">{p.ext.accountType === 'org' ? 'Компания' : 'Частный исполнитель'}{p.ext.reviews ? ` · на Яндекс Услугах: ${p.ext.rating ? `★ ${p.ext.rating}, ` : ''}отзывов ${p.ext.reviews}` : ''}</p>}
           {isAvailable(p) && <p><span className="chip on">🟢 Свободен сейчас{p.available?.note ? `: ${p.available.note}` : ''}</span></p>}
           {isHelper(p) && <p><span className="chip on">🤝 Сосед-помощник</span></p>}
           <RecBanner slug={p.slug} />

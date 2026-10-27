@@ -25,7 +25,11 @@ async function main() {
       shown++
       console.log(`--- карточка №${n}${nameless ? ' (нет имени)' : ''}`)
       for (const [k, v] of Object.entries(raw)) if (!HEAVY.has(k)) console.log(`  ${k}: ${JSON.stringify(brief(v))}`)
-      if (raw.raw && typeof raw.raw === 'object') console.log('поля внутри raw:', Object.keys(raw.raw as object).slice(0, 40).join(', '))
+      if (raw.raw && typeof raw.raw === 'object') {
+        const r = raw.raw as Record<string, unknown>
+        console.log('поля внутри raw:', Object.keys(r).slice(0, 40).join(', '))
+        if (r.personalInfo && typeof r.personalInfo === 'object') for (const [k, v] of Object.entries(r.personalInfo)) console.log(`  raw.personalInfo.${k}: ${JSON.stringify(brief(v))}`)
+      }
     }
     if (nth && shown) break
     if (!nth && shown >= want && n > 0 && want) { /* продолжаем считать поля до конца файла */ }

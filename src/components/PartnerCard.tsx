@@ -14,7 +14,7 @@ export function PartnerCard({ p }: { p: Partner }) {
         <b className="pcard-name">{p.name}{p.demo && <em className="badge">тест</em>}</b>
         <span className="muted small">{getCity(p.city)?.name}{p.since ? ` · с ${p.since} года` : ''}</span>
         {avgRating(p) !== null && <Stars value={avgRating(p)!} count={p.rCount} />}
-        {p.ext?.reviews ? <span className="muted small">Яндекс Услуги: ★ {p.ext.rating ?? '—'} · отзывов {p.ext.reviews}</span> : null}
+        {p.ext?.reviews ? <span className="muted small">Яндекс Услуги: {p.ext.rating ? `★ ${p.ext.rating} · ` : ''}отзывов {p.ext.reviews}</span> : null}
         <TrustBadges p={p} compact />
         {p.price && <span className="price">{p.price}</span>}
         {p.loyalty && <span className="gift">🎁 Скидки постоянным клиентам до {Math.max(...p.loyalty.tiers.map(t => t.percent))}%</span>}
