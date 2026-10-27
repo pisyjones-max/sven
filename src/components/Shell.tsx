@@ -11,6 +11,7 @@ export function Header() {
         <nav>
           <Link href={`/${KIND_LABEL.zastroyshchiki.path}`}>Застройщики</Link>
           <Link href={`/${KIND_LABEL.uslugi.path}`}>Услуги</Link>
+          <Link href={`/${KIND_LABEL.katalog.path}`}>Каталог</Link>
           <OrdersLink />
           <Link href="/partner/register" className="btn sm">Для компаний</Link>
         </nav>

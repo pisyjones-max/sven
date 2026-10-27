@@ -1,4 +1,4 @@
-export type Kind = 'zastroyshchiki' | 'uslugi'
+export type Kind = 'zastroyshchiki' | 'uslugi' | 'katalog'
 
 export interface Category {
   slug: string
@@ -41,11 +41,24 @@ export const CATEGORIES: Category[] = [
     blurb: 'Спил и удаление деревьев, обрезка веток, вывоз и распил на дрова.' },
   { slug: 'remont-i-stroitelstvo', kind: 'uslugi', title: 'Ремонт и строительство: другие работы', h1: 'Ремонт и строительство: мастера и бригады', lead: 0,
     blurb: 'Мастера и бригады по ремонту и строительству, чьих работ нет в быстрых услугах: антенны, бетон, алмазное сверление, альтернативная энергия и другое.' },
+  { slug: 'raznoe', kind: 'katalog', title: 'Разное', h1: 'Разные услуги', lead: 0, blurb: 'Разные услуги: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'krasota', kind: 'katalog', title: 'Красота', h1: 'Услуги красоты', lead: 0, blurb: 'Услуги красоты: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'arenda', kind: 'katalog', title: 'Аренда', h1: 'Аренда', lead: 0, blurb: 'Аренда: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'hozyajstvo-i-uborka', kind: 'katalog', title: 'Хозяйство и уборка', h1: 'Хозяйство и уборка', lead: 0, blurb: 'Хозяйство и уборка: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'remont-avto', kind: 'katalog', title: 'Ремонт авто', h1: 'Ремонт автомобилей', lead: 0, blurb: 'Ремонт автомобилей: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'perevozki-i-kureryi', kind: 'katalog', title: 'Перевозки и курьеры', h1: 'Перевозки и курьерские услуги', lead: 0, blurb: 'Перевозки и курьерские услуги: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'dizajneryi', kind: 'katalog', title: 'Дизайнеры', h1: 'Услуги дизайнеров', lead: 0, blurb: 'Услуги дизайнеров: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'kompyuteryi-i-it', kind: 'katalog', title: 'Компьютеры и IT', h1: 'Компьютерная помощь и IT-услуги', lead: 0, blurb: 'Компьютерная помощь и IT-услуги: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'organizatsiya-meropriyatij', kind: 'katalog', title: 'Организация мероприятий', h1: 'Организация мероприятий', lead: 0, blurb: 'Организация мероприятий: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'foto-video-audio', kind: 'katalog', title: 'Фото, видео, аудио', h1: 'Фото, видео и аудио', lead: 0, blurb: 'Фото, видео и аудио: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'artistyi', kind: 'katalog', title: 'Артисты', h1: 'Артисты и ведущие', lead: 0, blurb: 'Артисты и ведущие: исполнители и компании Раменского района и Подмосковья.' },
+  { slug: 'ohrana-i-detektivyi', kind: 'katalog', title: 'Охрана и детективы', h1: 'Охрана и детективные услуги', lead: 0, blurb: 'Охрана и детективные услуги: исполнители и компании Раменского района и Подмосковья.' },
 ]
 
 export const KIND_LABEL: Record<Kind, { title: string; path: string }> = {
   zastroyshchiki: { title: 'Застройщики и дома', path: 'zastroyshchiki' },
   uslugi: { title: 'Услуги для дома', path: 'uslugi' },
+  katalog: { title: 'Каталог исполнителей', path: 'katalog' }, // рубрики внешней базы (парсер): всё, что не входит в услуги для дома
 }
 
 export interface City { slug: string; name: string; in: string }

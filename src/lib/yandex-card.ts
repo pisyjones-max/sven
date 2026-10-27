@@ -44,7 +44,8 @@ export type MapResult =
 // (первая часть пути). Всё, чего тут нет, не импортируется молча, а попадает в отчёт как «пропущено».
 // Добавлять сюда строки по мере появления категорий в каталоге.
 export const BUCKET = 'remont-i-stroitelstvo'
-const RUBRIC_MAP: Record<string, string> = { 'remont-i-stroitelstvo': BUCKET }
+const RUBRIC_MAP: Record<string, string> = Object.fromEntries(
+  ['remont-i-stroitelstvo', 'raznoe', 'krasota', 'arenda', 'hozyajstvo-i-uborka', 'remont-avto', 'perevozki-i-kureryi', 'dizajneryi', 'kompyuteryi-i-it', 'organizatsiya-meropriyatij', 'foto-video-audio', 'artistyi', 'ohrana-i-detektivyi'].map(r => [r, r]))
 // Точные категории (по пути без префикса рубрики), когда в каталоге есть своя: путь → slug
 const PATH_RULES: [RegExp, string][] = []
 

@@ -66,7 +66,7 @@ export function LeadForm({ cat, city, title = 'Подберём исполнит
       {!cat && (
         <select value={c} onChange={e => setC(e.target.value)} required aria-label="Что нужно">
           <option value="" disabled>Что нужно?</option>
-          {(Object.keys(KIND_LABEL) as Kind[]).map(k => (
+          {(Object.keys(KIND_LABEL) as Kind[]).filter(k => k !== 'katalog').map(k => (
             <optgroup key={k} label={KIND_LABEL[k].title}>
               {CATEGORIES.filter(x => x.kind === k).map(x => <option key={x.slug} value={x.slug}>{x.title}</option>)}
             </optgroup>

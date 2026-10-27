@@ -22,7 +22,7 @@ const card = (over: Record<string, unknown> = {}) => ({
 test('битые записи не роняют импорт', async () => {
   const bad: unknown[] = [null, 'строка', 42, [], {}, card({ id: undefined, worker_id: undefined, ydo_worker_id: undefined }), card({ id: 'b1', worker_id: 'b1', ydo_worker_id: 'b1', name: '  ', first_name: '', last_name: '' }),
     card({ id: 'b2', worker_id: 'b2', ydo_worker_id: 'b2', categories: [], found_in: [] }),
-    card({ id: 'b3', worker_id: 'b3', ydo_worker_id: 'b3', categories: [{ path: 'krasota/manikyur', name: 'Маникюр' }] })]
+    card({ id: 'b3', worker_id: 'b3', ydo_worker_id: 'b3', categories: [{ path: 'neizvestnaya-rubrika/x', name: 'Неизвестная' }] })]
   const r = await importParserCards([...bad, card({ id: 'ok1', worker_id: 'ok1', ydo_worker_id: 'ok1' })], false)
   assert.equal(r.counts.invalid, 8)
   assert.equal(r.counts.skipped, 1, 'чужая рубрика: пропуск с причиной, не молчаливая потеря')
