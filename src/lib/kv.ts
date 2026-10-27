@@ -108,6 +108,14 @@ export async function kvDel(key: string): Promise<void> {
   await kvFetch(`/del/${encodeURIComponent(key)}`)
 }
 
+// Все значения по маске одним запросом (в Postgres это один SELECT вместо тысяч обращений)
+export async function kvScanValues<T>(pattern: string): Promise<[string, T][]> {
+  if (PG_URL) return (await (await pgPool()).query("SELECT key, value FROM kv WHERE key LIKE $1 ESCAPE '\\'", [likeOf(pattern)])).rows.map(r => [String(r.key), r.value as T])
+  const keys = await kvScanKeys(pattern)
+  const vals = await Promise.all(keys.map(k => kvGet<T>(k)))
+  return keys.flatMap((k, i) => (vals[i] === null ? [] : [[k, vals[i] as T] as [string, T]]))
+}
+
 export async function kvScanKeys(pattern: string): Promise<string[]> {
   if (PG_URL) return (await (await pgPool()).query("SELECT key FROM kv WHERE key LIKE $1 ESCAPE '\\'", [likeOf(pattern)])).rows.map(r => String(r.key))
   if (!isKvConfigured()) {

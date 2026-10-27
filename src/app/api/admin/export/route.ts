@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { kvGet, kvScanKeys } from '@/lib/kv'
+import { kvScanValues } from '@/lib/kv'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +8,6 @@ export async function GET(req: NextRequest) {
   const key = process.env.ADMIN_KEY
   if (!key || req.nextUrl.searchParams.get('key') !== key) return NextResponse.json({ ok: false }, { status: 401 })
   const out: Record<string, unknown> = {}
-  for (const k of await kvScanKeys('*')) out[k] = await kvGet(k)
+  for (const [k, v] of await kvScanValues<unknown>('*')) out[k] = v
   return new NextResponse(JSON.stringify(out), { headers: { 'Content-Type': 'application/json' } })
 }

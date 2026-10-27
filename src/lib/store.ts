@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto'
-import { kvGet, kvSet, kvScanKeys } from './kv'
+import { kvGet, kvSet, kvScanValues } from './kv'
 import { maskContacts } from './mask'
 import { DEMO_PARTNERS } from './demo'
 import { ADMIN_CHAT } from './tg'
@@ -145,8 +145,7 @@ export async function getPartnerByToken(token: string) {
 
 export async function listPartners(): Promise<Partner[]> {
   await ensureDemo()
-  const keys = await kvScanKeys('partner:*')
-  const all = await Promise.all(keys.map(k => kvGet<Partner>(k)))
+  const all = (await kvScanValues<Partner>('partner:*')).map(([, p]) => p)
   return all.filter((p): p is Partner => !!p).sort((a, b) => b.createdAt - a.createdAt)
 }
 
@@ -182,8 +181,7 @@ export async function listConvs(partnerId: string): Promise<Conv[]> {
 }
 
 export async function listAllConvs(): Promise<Conv[]> {
-  const keys = await kvScanKeys('conv:*')
-  const all = await Promise.all(keys.map(k => kvGet<Conv>(k)))
+  const all = (await kvScanValues<Conv>('conv:*')).map(([, c]) => c)
   return all.filter((c): c is Conv => !!c).sort((a, b) => b.createdAt - a.createdAt)
 }
 
