@@ -7,6 +7,7 @@ import { importParserCards } from '../src/lib/yandex-import'
 import { mapCard } from '../src/lib/yandex-card'
 import { questionsFor, composeRequest } from '../src/lib/questions'
 import { convBucket } from '../src/lib/convstatus'
+import { searchPartners, paginate } from '../src/lib/catalog-search'
 import { smsLeadAlert } from '../src/lib/sms'
 import { listPublicPartners, getPartner } from '../src/lib/store'
 import { kvGet } from '../src/lib/kv'
@@ -122,4 +123,19 @@ test('организация из справочника: пустое name, н�
   assert.ok(m.ok); if (m.ok) assert.equal(m.card.name, 'Воскресенский бетонный завод')
   const none = mapCard(card({ name: '', first_name: null, last_name: null, raw: { personalInfo: {} } }))
   assert.equal(none.ok, false, 'если названия нигде нет, карточка честно идёт в ошибки')
+})
+
+test('поиск по каталогу и страницы', () => {
+  const mk = (name: string, specs: string[] = [], desc = '') => ({ name, desc, ext: { specs } }) as never
+  const list = [mk('Воскресенский бетонный завод', ['Бетонные работы']), mk('Ёлкин Иван', ['Алмазное сверление']), mk('ИП Петров', [], 'Антенны и спутниковое ТВ')]
+  assert.equal(searchPartners(list, 'бетон').length, 1)
+  assert.equal(searchPartners(list, 'елкин').length, 1, 'ё и е не различаются')
+  assert.equal(searchPartners(list, 'сверление иван').length, 1, 'несколько слов: все должны встретиться')
+  assert.equal(searchPartners(list, 'антенны').length, 1, 'по описанию')
+  assert.equal(searchPartners(list, 'xyz').length, 0)
+  assert.equal(searchPartners(list, ' ').length, 3, 'пустой запрос не фильтрует')
+  const big = Array.from({ length: 60 }, (_, i) => i)
+  assert.deepEqual([paginate(big, 1).items.length, paginate(big, 3).items.length, paginate(big, 3).pages], [24, 12, 3])
+  assert.equal(paginate(big, 99).page, 3, 'страница за пределами подтягивается к последней')
+  assert.equal(paginate(big, -5).page, 1); assert.equal(paginate([], 1).pages, 1)
 })

@@ -6,7 +6,9 @@ import { AdBanner } from './AdBanner'
 import { OrderWizard } from './OrderWizard'
 import { jsonLd, faqSchema, breadcrumbs } from '@/lib/schema'
 
-export function CatalogView({ cat, city, partners }: { cat: Category; city?: City; partners: Partner[] }) {
+type View = { cat: Category; city?: City; partners: Partner[]; q?: string; page?: number; pages?: number; found?: number; all?: number }
+
+export function CatalogView({ cat, city, partners, q = '', page = 1, pages = 1, found, all }: View) {
   const where = city ? ` ${city.in}` : ' в Подмосковье'
   const faq = [
     { q: `Как найти исполнителя: ${cat.title.toLowerCase()}${where}?`, a: `Выберите компанию в списке, откройте её страницу и напишите в чат. Ответ придёт на эту же страницу, регистрация не нужна.` },
@@ -14,6 +16,7 @@ export function CatalogView({ cat, city, partners }: { cat: Category; city?: Cit
     { q: 'Кому платить?', a: 'Договор и оплата напрямую с исполнителем. Платформа только передаёт заявку.' },
   ]
   const path = catHref(cat, city?.slug)
+  const href = (pg: number) => `${path}?${new URLSearchParams({ ...(q ? { q } : {}), ...(pg > 1 ? { page: String(pg) } : {}) }).toString()}`.replace(/\?$/, '')
   return (
     <>
       <script {...jsonLd(faqSchema(faq))} />
@@ -30,6 +33,14 @@ export function CatalogView({ cat, city, partners }: { cat: Category; city?: Cit
       </div>
       <div className="cat-grid">
         <div>
+          {((all ?? 0) > 12 || q) && (
+            <form method="get" action={path} className="catsearch">
+              <input type="search" name="q" defaultValue={q} placeholder="Поиск по названию или специализации" aria-label="Поиск" maxLength={80} />
+              <button className="btn sm" type="submit">Найти</button>
+              {q && <Link className="btn ghost sm" href={path}>Сбросить</Link>}
+            </form>
+          )}
+          {q && <p className="muted small">Найдено: {found ?? partners.length}{all ? ` из ${all}` : ''}</p>}
           {partners.length ? (
             <div className="plist">
               {partners.map((p, i) => (
@@ -39,7 +50,16 @@ export function CatalogView({ cat, city, partners }: { cat: Category; city?: Cit
                 </div>
               ))}
               {partners.length < 2 && <AdBanner slot="wide" seed={`${path}-inline`} />}
+              {pages > 1 && (
+                <nav className="pager" aria-label="Страницы">
+                  {page > 1 ? <Link className="btn ghost sm" href={href(page - 1)} rel="prev">← Назад</Link> : <span />}
+                  <span className="muted small">Страница {page} из {pages}</span>
+                  {page < pages ? <Link className="btn ghost sm" href={href(page + 1)} rel="next">Дальше →</Link> : <span />}
+                </nav>
+              )}
             </div>
+          ) : q ? (
+            <div className="card empty"><h3>Ничего не нашлось по «{q}»</h3><p>Попробуйте другое слово или сбросьте поиск.</p><Link className="btn" href={path}>Показать всех</Link></div>
           ) : (
             <>
               <div className="card empty">

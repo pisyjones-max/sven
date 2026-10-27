@@ -278,3 +278,6 @@ input,select,textarea{min-height:46px}
 .btn.sm{min-height:38px}
 .hero-ph.ph-img{aspect-ratio:auto;height:clamp(170px,24vw,280px)}
 .hero-ph .ph-chip{background:none;backdrop-filter:none;font-size:clamp(20px,3.2vw,34px);font-weight:800;letter-spacing:-.01em;padding:0;align-self:flex-end;margin:0 0 20px 26px;text-shadow:0 2px 12px rgba(0,0,0,.4)}
+
+.catsearch{display:flex;gap:8px;margin:0 0 14px}.catsearch input{flex:1;min-width:0;border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;font:inherit;background:#fff;color:var(--ink)}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:18px 0}
